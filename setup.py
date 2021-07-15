@@ -23,6 +23,6 @@ setup(
     # the following makes a plugin available to pytest
     entry_points={"pytest11": ["pytest_allure_spec_coverage = pytest_allure_spec_coverage.plugin"]},
     # custom PyPI classifier for pytest plugins
-    install_requires=["pytest", "allure-pytest"],
+    install_requires=["pytest", "allure-pytest", "toml", "docutils"],
     classifiers=["Framework :: Pytest"],
 )

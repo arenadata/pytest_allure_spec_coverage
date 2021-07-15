@@ -10,3 +10,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Main plugin module"""
+
+
+from _pytest.config.argparsing import Parser, OptionGroup
+
+
+# pylint: disable=redefined-outer-name
+def pytest_addoption(parser: Parser):
+    group: OptionGroup = parser.getgroup("Allure spec coverage",
+                                         "Options related to pytest_allure_spec_coverage plugin")
+    # TODO implement this
+    group.addoption(
+        "--spec_collector",
+        action="store",
+        default=None,
+    )
