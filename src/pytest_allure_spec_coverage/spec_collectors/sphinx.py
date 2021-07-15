@@ -1,11 +1,12 @@
+"""Sphinx spec collector implementation"""
 import os
 import warnings
 from typing import Optional
 from docutils.core import publish_doctree
 from docutils.utils import SystemMessage
 
-from pytest_allure_spec_coverage.models.Collector import Collector
-from pytest_allure_spec_coverage.models.Scenario import Scenario, Parent
+from pytest_allure_spec_coverage.models.collector import Collector
+from pytest_allure_spec_coverage.models.scenario import Scenario, Parent
 
 
 class SphinxCollector(Collector):
@@ -37,7 +38,7 @@ class SphinxCollector(Collector):
         scenarios = []
         parents_display_names = {}
         root_path = self.sphinx_dir.rsplit("/", maxsplit=1)[0]
-        for root, dirs, files in os.walk(self.sphinx_dir):
+        for root, _, files in os.walk(self.sphinx_dir):
             parent_name = root.replace(root_path, "").strip("/").replace("/", ".")
             parent_display_name = parent_name.rsplit(".", maxsplit=1)[-1]
             if "index.rst" in files:
@@ -49,13 +50,15 @@ class SphinxCollector(Collector):
                 name = file.rsplit(".", maxsplit=1)[0]
                 display_name = self._get_title_from_rst(os.path.join(root, file)) or file
 
-                scenarios.append(Scenario(
-                    name=name,
-                    display_name=display_name,
-                    parents=self._get_parents_by_fullname(parent_name, parents_display_names),
-                    link=self._create_link(name, parent_name, branch),
-                    branch=branch
-                ))
+                scenarios.append(
+                    Scenario(
+                        name=name,
+                        display_name=display_name,
+                        parents=self._get_parents_by_fullname(parent_name, parents_display_names),
+                        link=self._create_link(name, parent_name, branch),
+                        branch=branch,
+                    )
+                )
         return scenarios
 
     def _create_link(self, name, parent_name, branch):
@@ -69,12 +72,12 @@ class SphinxCollector(Collector):
 
     @staticmethod
     def _get_title_from_rst(file_path):
-        with open(file_path, "r") as f:
+        with open(file_path, "r") as file:
             rst_lines = []
-            line = f.readline()
+            line = file.readline()
             while line and line != "\n":
                 rst_lines.append(line)
-                line = f.readline()
+                line = file.readline()
         try:
             document = publish_doctree("".join(rst_lines))
         except SystemMessage:
