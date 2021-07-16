@@ -44,7 +44,7 @@ class Collector(ABC):
         """
 
     def read_config(self):
-        """Read pyproject.yaml and save plugin config"""
+        """Read pyproject.toml and save plugin config"""
         if os.path.exists(self.path_to_config_file):
             config = toml.load(self.path_to_config_file)
             self.config = config.get("tool", {}).get("pytest_allure_spec_coverage", {})

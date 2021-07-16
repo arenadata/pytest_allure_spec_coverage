@@ -66,6 +66,8 @@ class TestCollector(Collector):
 @pytest.fixture()
 def pyproject_toml(request):
     """pyproject content"""
+    if not hasattr(request, "param"):
+        raise ValueError("Please parametrize fixture by pyproject config value")
     return {"tool": {"pytest_allure_spec_coverage": request.param}}
 
 
@@ -106,7 +108,7 @@ def test_collector_config_loading(pyproject_toml, test_collector):
 def test_sphinx_collector(pyproject_toml, sphinx_collector):
     """Test that sphinx scenarios collected"""
     scenarios = sphinx_collector.collect()
-    assert scenarios == SCENARIOS
+    assert scenarios == SCENARIOS, "Collected scenarios doesn't equal expected"
 
 
 @pytest.mark.parametrize(
@@ -123,5 +125,6 @@ def test_sphinx_collector_with_endpoint(pyproject_toml, sphinx_collector):
     """
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
-        assert scenario.link
-        assert scenario.link.startswith("https://spec.url")
+        assert scenario.link, "Scenario link should exists"
+        parents = "/".join([parent.name for parent in scenario.parents])
+        assert scenario.link == f"https://spec.url/{parents}/{scenario.name}.html"
