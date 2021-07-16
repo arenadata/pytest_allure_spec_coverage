@@ -19,6 +19,8 @@ from docutils.utils import SystemMessage
 from pytest_allure_spec_coverage.models.collector import Collector
 from pytest_allure_spec_coverage.models.scenario import Scenario, Parent
 
+PARENT_INDEX_PAGE = "index.rst"
+
 
 class SphinxCollector(Collector):
     """
@@ -52,9 +54,11 @@ class SphinxCollector(Collector):
         for root, _, files in os.walk(self.sphinx_dir):
             parent_name = root.replace(root_path, "").strip("/").replace("/", ".")
             parent_display_name = parent_name.rsplit(".", maxsplit=1)[-1]
-            if "index.rst" in files:
-                parent_display_name = self._get_title_from_rst(os.path.join(root, "index.rst")) or parent_display_name
-                files.remove("index.rst")
+            if PARENT_INDEX_PAGE in files:
+                parent_display_name = (
+                    self._get_title_from_rst(os.path.join(root, PARENT_INDEX_PAGE)) or parent_display_name
+                )
+                files.remove(PARENT_INDEX_PAGE)
             parents_display_names[parent_name] = parent_display_name
 
             for file in filter(lambda f: f.endswith(".rst"), files):

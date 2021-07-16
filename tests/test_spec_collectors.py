@@ -57,10 +57,10 @@ class TestCollector(Collector):
     """Simple collector for config test"""
 
     def collect(self):
-        pass
+        """Nothing to do"""
 
     def validate_config(self):
-        pass
+        """Nothing to do"""
 
 
 @pytest.fixture()
