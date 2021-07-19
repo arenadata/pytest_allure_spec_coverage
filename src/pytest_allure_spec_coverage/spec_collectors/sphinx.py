@@ -24,19 +24,25 @@ PARENT_INDEX_PAGE = "index.rst"
 
 class SphinxCollector(Collector):
     """
-    Sphinx collector allows you to collect scenarios from .rst files
+    Sphinx collector allows you to collect scenarios from .rst files located inside a project with tests
     At the moment, only title will be read from .rst file
     Template variables for title do not support
 
     Possible options:
-        - sphinx_dir: required option where is places your scenarios
+        - sphinx_dir: required option, directory with the .rst scenarios
         - sphinx_endpoint: where is hosted your scenarios. Need to form scenario link. Optionally
+        - default_branch: Need to form scenario link. "master" by default
+            Sphinx can be hosted in different branches.
+            For non-default branch scenario link be like {sphinx_endpoint}/{branch}/{scenario_url}
+            But the branch is absent if tests run on default branch -
+                in this case link be like {sphinx_endpoint}/{scenario_url}
     """
 
     sphinx_dir: str
     spec_endpoint: Optional[str]
+    default_branch: str
 
-    def validate_config(self):
+    def setup_config(self):
         if "sphinx_dir" not in self.config:
             raise ValueError("Option sphinx_dir is required")
         sphinx_dir = self.config.get("sphinx_dir")
@@ -45,6 +51,7 @@ class SphinxCollector(Collector):
 
         self.sphinx_dir = sphinx_dir
         self.spec_endpoint = self.config.get("spec_endpoint")
+        self.default_branch = self.config.get("default_branch", "master")
 
     def collect(self):
         branch = os.getenv("BRANCH")
@@ -80,7 +87,7 @@ class SphinxCollector(Collector):
         if not self.spec_endpoint:
             return None
         url = self.spec_endpoint
-        if branch:
+        if branch and branch != self.default_branch:
             url += f"/{branch}"
         url += f"/{parent_name.replace('.', '/')}"
         return f"{url}/{name}.html"
@@ -100,7 +107,8 @@ class SphinxCollector(Collector):
             return ""
         title = document.attributes.get("title")
         if title and "|" in title:
-            warnings.warn(f"Templating vars in title '{title}' do not support.")
+            warnings.warn(f"Templating vars in the title '{title}' are not supported. "
+                          f"Title will be used as is, without substitutions")
         return title
 
     @staticmethod

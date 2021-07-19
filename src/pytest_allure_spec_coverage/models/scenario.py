@@ -16,7 +16,7 @@ from typing import Optional, List
 
 @dataclass
 class Parent:
-    """Parent scenario info"""
+    """Info about scenario parent (used for grouping only)"""
 
     name: str
     display_name: str

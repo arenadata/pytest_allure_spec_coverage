@@ -59,7 +59,7 @@ class TestCollector(Collector):
     def collect(self):
         """Nothing to do"""
 
-    def validate_config(self):
+    def setup_config(self):
         """Nothing to do"""
 
 
@@ -128,3 +128,30 @@ def test_sphinx_collector_with_endpoint(pyproject_toml, sphinx_collector):
         assert scenario.link, "Scenario link should exists"
         parents = "/".join([parent.name for parent in scenario.parents])
         assert scenario.link == f"https://spec.url/{parents}/{scenario.name}.html"
+
+
+@pytest.mark.parametrize(
+    "pyproject_toml",
+    [
+        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
+    ],
+    ids=["with_endpoint_and_branch"],
+    indirect=True,
+)
+def test_sphinx_collector_with_endpoint_and_branch(pyproject_toml, sphinx_collector):
+    """
+    Test that sphinx scenarios has link
+    """
+    os.environ["BRANCH"] = "master"
+    scenarios = sphinx_collector.collect()
+    for scenario in scenarios:
+        assert scenario.link, "Scenario link should exists"
+        parents = "/".join([parent.name for parent in scenario.parents])
+        assert scenario.link == f"https://spec.url/{parents}/{scenario.name}.html"
+
+    os.environ["BRANCH"] = "feature"
+    scenarios = sphinx_collector.collect()
+    for scenario in scenarios:
+        assert scenario.link, "Scenario link should exists"
+        parents = "/".join([parent.name for parent in scenario.parents])
+        assert scenario.link == f"https://spec.url/feature/{parents}/{scenario.name}.html"

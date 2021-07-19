@@ -33,19 +33,26 @@ class Collector(ABC):
     @abstractmethod
     def collect(self) -> List[Scenario]:
         """
-        Main method of collect scenarios
+        The main method of collect scenarios. Should return a flat list of Scenario objects
         """
 
     @abstractmethod
-    def validate_config(self):
+    def setup_config(self):
         """
-        Collector by default read configuration without validation
-        Each collector needs its own config params
+        Each collector can have an individual config structure.
+        This method will be called at the final stage of the config load
+        to validate its structure and assigment config variables
+
+        Raises:
+            ValueError: if config validation fails
         """
 
     def read_config(self):
-        """Read pyproject.toml and save plugin config"""
+        """
+        Read all params related to pytest_allure_spec_coverage from pyproject.toml
+        Save it to plugin config with validation
+        """
         if os.path.exists(self.path_to_config_file):
             config = toml.load(self.path_to_config_file)
             self.config = config.get("tool", {}).get("pytest_allure_spec_coverage", {})
-            self.validate_config()
+            self.setup_config()

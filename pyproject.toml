@@ -12,5 +12,9 @@ exclude = '''
     | spec
     | build
     | dist
+    | venv
 )
 '''
+[tool.pylint]
+max-line-length = 120
+max-module-lines = 1000
