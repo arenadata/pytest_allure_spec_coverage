@@ -15,6 +15,7 @@ exclude = '''
     | venv
 )
 '''
-[tool.pylint]
-max-line-length = 120
+
+[tool.pylint.format]
+max-line-length = 100
 max-module-lines = 1000
