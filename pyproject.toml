@@ -6,13 +6,13 @@ exclude = '''
 (
       \.git
     | \.venv
-    | __pycache__
-    | data
-    | docs
-    | spec
-    | build
-    | dist
-    | venv
+    | /__pycache__
+    | /data
+    | /docs
+    | /spec
+    | /build
+    | /dist
+    | /venv
 )
 '''
 

@@ -107,8 +107,10 @@ class SphinxCollector(Collector):
             return ""
         title = document.attributes.get("title")
         if title and "|" in title:
-            warnings.warn(f"Templating vars in the title '{title}' are not supported. "
-                          f"Title will be used as is, without substitutions")
+            warnings.warn(
+                f"Templating vars in the title '{title}' are not supported. "
+                f"Title will be used as is, without substitutions"
+            )
         return title
 
     @staticmethod
