@@ -6,11 +6,22 @@ exclude = '''
 (
       \.git
     | \.venv
-    | __pycache__
-    | data
-    | docs
-    | spec
-    | build
-    | dist
+    | /__pycache__
+    | /data
+    | /docs
+    | /spec
+    | /build
+    | /dist
+    | /venv
 )
 '''
+
+[tool.pylint.master]
+ignore-paths = [
+    "^build/.*$",
+    "^dist/.*$",
+]
+
+[tool.pylint.format]
+max-line-length = 120
+max-module-lines = 1000
