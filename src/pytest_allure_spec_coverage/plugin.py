@@ -12,9 +12,9 @@
 
 """Main plugin module"""
 
+from contextlib import suppress
 from dataclasses import dataclass, field
-from itertools import chain
-from typing import ClassVar, Iterable, List, Mapping
+from typing import ClassVar, Collection, Iterable, List, Mapping, MutableMapping, Optional, Type
 
 import pytest
 from _pytest.config import Config
@@ -22,15 +22,19 @@ from _pytest.config.argparsing import Parser
 from _pytest.config.exceptions import UsageError
 from _pytest.mark.structures import Mark
 from _pytest.nodes import Item
-from allure_commons.model2 import Label, Status, TestResult
+from allure_commons.model2 import Label, Link, Status, TestResult
 from allure_commons.reporter import AllureReporter
+from allure_commons.types import LinkType
 from allure_commons.utils import uuid4
 from allure_pytest.listener import AllureListener
+from allure_pytest.utils import ALLURE_LINK_MARK
 from pluggy.manager import PluginManager
 
 from pytest_allure_spec_coverage.models.collector import Collector
 from pytest_allure_spec_coverage.models.scenario import Scenario
 from pytest_allure_spec_coverage.spec_collectors.sphinx import SphinxCollector
+
+CollectorsMapping = MutableMapping[str, Type[Collector]]
 
 
 def safe_get_marker(item: Item, name: str) -> Mark:
@@ -40,8 +44,8 @@ def safe_get_marker(item: Item, name: str) -> Mark:
     return item.get_closest_marker(name, stub_marker)
 
 
-def scenario_links(item: Item) -> Iterable[str]:
-    """Get scenario links from pytest.Item"""
+def scenario_ids(item: Item) -> Iterable[str]:
+    """Get scenario identifiers from pytest.Item"""
 
     return safe_get_marker(item, ScenariosMatcher.MARKER_NAME).args
 
@@ -50,14 +54,20 @@ def allure_labels(scenario: Scenario) -> List[Label]:
     """Make labels for Allure from the given scenario"""
 
     labels = ("parentSuite", "suite", "subSuite")
-    values = [p.name for p in scenario.parents]
+    values = [p.display_name for p in scenario.parents]
     if len(values) > 3:
         itv = slice(2, None)
         values[itv] = [".".join(values[itv])]
     return [Label(label, value) for label, value in zip(labels, values)]
 
 
-@dataclass
+def allure_links(scenario: Scenario) -> List[Link]:
+    """Make links for Allure from the given scenario"""
+
+    return [Link(url=scenario.link, name="Scenario", type=LinkType.LINK)]
+
+
+@dataclass(eq=False)
 class ScenariosMatcher:
     """Match collected test cases with collected scenarios and report missed ones"""
 
@@ -68,22 +78,38 @@ class ScenariosMatcher:
     collector: Collector
     reporter: AllureReporter
 
-    scenarios: Iterable[Scenario] = field(default_factory=tuple)
-    implemented: Iterable[str] = field(default_factory=tuple)
+    scenarios: Collection[Scenario] = field(default_factory=list)
+    matches: Mapping[Scenario, List[pytest.Item]] = field(default_factory=dict)
 
     @property
     def missed(self) -> Iterable[Scenario]:
         """Not implemented scenarios"""
 
-        return (scenario for scenario in self.scenarios if scenario.link not in self.implemented)
+        return (scenario for scenario, items in self.matches.items() if not items)
 
-    def __hash__(self) -> int:
-        return hash(self.PLUGIN_NAME)
+    def match(self, items: List[pytest.Item]) -> None:
+        """Match collected tests items with its scenarios"""
 
-    def collect_implemented(self, items: List[pytest.Item]) -> None:
-        """Collect implemented scenario links"""
+        self.matches = {sc: [] for sc in self.scenarios}
+        sc_lookup = {sc.id: sc for sc in self.scenarios}
+        for item in items:
+            for key in scenario_ids(item):
+                with suppress(KeyError):
+                    self.matches[sc_lookup[key]].append(item)
 
-        self.implemented = set(chain.from_iterable(scenario_links(item) for item in items))
+    def mark(self) -> None:
+        """Add markers with links to spec for matched items"""
+
+        link_marker = getattr(pytest.mark, ALLURE_LINK_MARK)
+        for scenario, items in self.matches.items():
+            for item in items:
+                item.add_marker(
+                    link_marker(
+                        scenario.link,
+                        name="Scenario",
+                        link_type=LinkType.LINK,
+                    )
+                )
 
     def report(self) -> None:
         """Report about not implemented scenarios"""
@@ -99,6 +125,7 @@ class ScenariosMatcher:
             description=scenario.display_name,
             status=Status.UNKNOWN,
             labels=allure_labels(scenario),
+            links=allure_links(scenario),
         )
         self.reporter.schedule_test(uuid=fake_uuid, test_case=fake_result)
         self.reporter.close_test(uuid=fake_uuid)
@@ -113,11 +140,12 @@ class ScenariosMatcher:
 
         self.scenarios = self.collector.collect()
 
-    @pytest.mark.tryfirst()
+    @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self, items: List[pytest.Item]) -> None:
         """Collect implemented test cases after items collection complete"""
 
-        self.collect_implemented(items)
+        self.match(items)
+        self.mark()
 
     def pytest_sessionfinish(self) -> None:
         """Add entries to report after session complete"""
@@ -141,7 +169,7 @@ def pytest_addoption(parser: Parser) -> None:
     parser.addoption("--sc-cfgpath", action="store", type=str, help="Path to spec collector configuration file")
 
 
-def pytest_register_spec_collectors(collectors: Mapping[str, Collector]) -> None:
+def pytest_register_spec_collectors(collectors: CollectorsMapping) -> None:
     """Register available spec collectors"""
 
     collectors["sphinx"] = SphinxCollector
@@ -151,7 +179,7 @@ def pytest_register_spec_collectors(collectors: Mapping[str, Collector]) -> None
 def pytest_configure(config: Config) -> None:
     """Validate preconditions and register required components"""
 
-    listener: AllureListener = next(
+    listener: Optional[AllureListener] = next(
         filter(
             lambda plugin: (isinstance(plugin, AllureListener)),
             dict(config.pluginmanager.list_name_plugin()).values(),
@@ -162,7 +190,7 @@ def pytest_configure(config: Config) -> None:
     if not listener or not config.option.sc_type:
         return
 
-    collectors: Mapping[str, Collector] = {}
+    collectors: CollectorsMapping = {}
     config.hook.pytest_register_spec_collectors(collectors=collectors)
     if config.option.sc_type not in collectors.keys():
         raise UsageError(f"Unexpected collector type, registered ones: {collectors.keys()}")

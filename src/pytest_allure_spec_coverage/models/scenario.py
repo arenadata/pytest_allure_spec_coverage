@@ -31,3 +31,17 @@ class Scenario:
     parents: List[Parent]
     link: Optional[str]
     branch: Optional[str]
+
+    @property
+    def id(self) -> str:  # pylint: disable=invalid-name
+        """Scenario identifier"""
+
+        return "/".join(
+            [
+                *[p.name for p in self.parents],
+                self.name,
+            ]
+        )
+
+    def __hash__(self) -> int:
+        return hash(self.id)

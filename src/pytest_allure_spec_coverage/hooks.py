@@ -14,8 +14,11 @@
 
 from typing import Mapping
 
+import pytest
+
 from pytest_allure_spec_coverage.models.collector import Collector
 
 
+@pytest.hookimpl()
 def pytest_register_spec_collectors(collectors: Mapping[str, Collector]) -> None:  # pylint: disable=unused-argument
     """Register available spec collectors"""
