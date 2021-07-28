@@ -140,7 +140,7 @@ class ScenariosMatcher:
 
         self.scenarios = self.collector.collect()
 
-    @pytest.hookimpl(trylast=True)
+    @pytest.hookimpl(tryfirst=True)
     def pytest_collection_modifyitems(self, items: List[pytest.Item]) -> None:
         """Collect implemented test cases after items collection complete"""
 
