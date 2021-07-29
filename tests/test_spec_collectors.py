@@ -11,14 +11,15 @@
 # limitations under the License.
 """Test that spec collectors is ok"""
 # pylint: disable=redefined-outer-name,unused-argument
-import os.path
-from unittest import mock
+import os
+from pathlib import Path
+from typing import Mapping
 
 import pytest
 import toml
-
+from pytest_allure_spec_coverage.config_provider import ConfigProvider
 from pytest_allure_spec_coverage.models.collector import Collector
-from pytest_allure_spec_coverage.models.scenario import Scenario, Parent
+from pytest_allure_spec_coverage.models.scenario import Parent, Scenario
 from pytest_allure_spec_coverage.spec_collectors import SphinxCollector
 
 SCENARIOS = [
@@ -72,7 +73,7 @@ def pyproject_toml(request):
 
 
 @pytest.fixture()
-def collector_config_path(pyproject_toml, tmpdir):
+def collector_config_path(pyproject_toml: Mapping, tmpdir):
     """Returns path to pyproject config file"""
     config_path = os.path.join(tmpdir, "pyproject.toml")
     with open(config_path, "w") as config_file:
@@ -81,31 +82,34 @@ def collector_config_path(pyproject_toml, tmpdir):
 
 
 @pytest.fixture()
-def test_collector(collector_config_path):
-    """Simple test collector"""
-    TestCollector.path_to_config_file = mock.PropertyMock(return_value=collector_config_path)
-    collector = TestCollector()
-    return collector
+def config_provider(collector_config_path: str):
+    """Config provider"""
+    path = Path(collector_config_path).parent
+    return ConfigProvider(path)
 
 
 @pytest.fixture()
-def sphinx_collector(collector_config_path):
+def test_collector(config_provider: ConfigProvider):
+    """Simple test collector"""
+    return TestCollector(config=config_provider.config)
+
+
+@pytest.fixture()
+def sphinx_collector(config_provider: ConfigProvider):
     """Prepared sphinx collector"""
-    SphinxCollector.path_to_config_file = mock.PropertyMock(return_value=collector_config_path)
-    collector = SphinxCollector()
-    return collector
+    return SphinxCollector(config=config_provider.config)
 
 
 @pytest.mark.parametrize("pyproject_toml", [{"option": "value"}], ids=["simple_config"], indirect=True)
-def test_collector_config_loading(pyproject_toml, test_collector):
+def test_config_provider_loading(config_provider: ConfigProvider):
     """Test that pyproject.toml load successful"""
-    assert test_collector.config.get("option") == "value", "Option from config not found"
+    assert config_provider.config.get("option") == "value", "Option from config not found"
 
 
 @pytest.mark.parametrize(
     "pyproject_toml", [{"sphinx_dir": "tests/sphinx_spec/scenarios"}], ids=["simple_scenarios"], indirect=True
 )
-def test_sphinx_collector(pyproject_toml, sphinx_collector):
+def test_sphinx_collector(sphinx_collector):
     """Test that sphinx scenarios collected"""
     scenarios = sphinx_collector.collect()
     assert scenarios == SCENARIOS, "Collected scenarios doesn't equal expected"
@@ -119,15 +123,14 @@ def test_sphinx_collector(pyproject_toml, sphinx_collector):
     ids=["with_endpoint"],
     indirect=True,
 )
-def test_sphinx_collector_with_endpoint(pyproject_toml, sphinx_collector):
+def test_sphinx_collector_with_endpoint(sphinx_collector):
     """
     Test that sphinx scenarios has link
     """
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
-        parents = "/".join([parent.name for parent in scenario.parents])
-        assert scenario.link == f"https://spec.url/{parents}/{scenario.name}.html"
+        assert scenario.link == f"https://spec.url/{scenario.id}.html"
 
 
 @pytest.mark.parametrize(
@@ -138,7 +141,7 @@ def test_sphinx_collector_with_endpoint(pyproject_toml, sphinx_collector):
     ids=["with_endpoint_and_branch"],
     indirect=True,
 )
-def test_sphinx_collector_with_endpoint_and_branch(pyproject_toml, sphinx_collector):
+def test_sphinx_collector_with_endpoint_and_branch(sphinx_collector):
     """
     Test that sphinx scenarios has link
     """
@@ -146,8 +149,7 @@ def test_sphinx_collector_with_endpoint_and_branch(pyproject_toml, sphinx_collec
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
-        parents = "/".join([parent.name for parent in scenario.parents])
-        assert scenario.link == f"https://spec.url/{parents}/{scenario.name}.html"
+        assert scenario.link == f"https://spec.url/{scenario.id}.html"
 
     os.environ["BRANCH"] = "feature"
     scenarios = sphinx_collector.collect()

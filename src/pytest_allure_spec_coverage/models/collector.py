@@ -10,11 +10,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Abstract collector"""
-import os
-from abc import ABC, abstractmethod
-from typing import Optional, List
 
-import toml
+from abc import ABC, abstractmethod
+from typing import List, Mapping
 
 from pytest_allure_spec_coverage.models.scenario import Scenario
 
@@ -24,11 +22,9 @@ class Collector(ABC):
     Abstract collector
     """
 
-    config: Optional[dict] = None
-    path_to_config_file = "pyproject.toml"
-
-    def __init__(self):
-        self.read_config()
+    def __init__(self, config: Mapping):
+        self.config = config
+        self.setup_config()
 
     @abstractmethod
     def collect(self) -> List[Scenario]:
@@ -46,13 +42,3 @@ class Collector(ABC):
         Raises:
             ValueError: if config validation fails
         """
-
-    def read_config(self):
-        """
-        Read all params related to pytest_allure_spec_coverage from pyproject.toml
-        Save it to plugin config with validation
-        """
-        if os.path.exists(self.path_to_config_file):
-            config = toml.load(self.path_to_config_file)
-            self.config = config.get("tool", {}).get("pytest_allure_spec_coverage", {})
-            self.setup_config()
