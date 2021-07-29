@@ -56,3 +56,5 @@ class Collector(ABC):
             config = toml.load(self.path_to_config_file)
             self.config = config.get("tool", {}).get("pytest_allure_spec_coverage", {})
             self.setup_config()
+        else:
+            raise ValueError(f"Config file {self.path_to_config_file} doesn't exists")
