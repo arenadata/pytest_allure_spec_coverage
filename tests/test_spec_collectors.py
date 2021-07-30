@@ -24,6 +24,7 @@ from pytest_allure_spec_coverage.spec_collectors import SphinxCollector
 
 SCENARIOS = [
     Scenario(
+        id="simple_scenario",
         name="simple_scenario",
         display_name="Simple scenario",
         parents=[Parent(name="scenarios", display_name="There is some scenarios")],
@@ -31,6 +32,7 @@ SCENARIOS = [
         branch=None,
     ),
     Scenario(
+        id="parent_folder/scenario_with_parent",
         name="scenario_with_parent",
         display_name="Scenario with parent",
         parents=[
@@ -41,6 +43,7 @@ SCENARIOS = [
         branch=None,
     ),
     Scenario(
+        id="parent_folder/second_level_parent/scenario_with_parents",
         name="scenario_with_parents",
         display_name="Scenario with two level of parents",
         parents=[
@@ -130,7 +133,7 @@ def test_sphinx_collector_with_endpoint(sphinx_collector):
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
-        assert scenario.link == f"https://spec.url/{scenario.id}.html"
+        assert scenario.link == f"https://spec.url/{scenario.parents[0].name}/{scenario.id}.html"
 
 
 @pytest.mark.parametrize(
@@ -149,7 +152,7 @@ def test_sphinx_collector_with_endpoint_and_branch(sphinx_collector):
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
-        assert scenario.link == f"https://spec.url/{scenario.id}.html"
+        assert scenario.link == f"https://spec.url/{scenario.parents[0].name}/{scenario.id}.html"
 
     os.environ["BRANCH"] = "feature"
     scenarios = sphinx_collector.collect()
