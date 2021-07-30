@@ -54,7 +54,7 @@ class SphinxCollector(Collector):
         self.default_branch = self.config.get("default_branch", "master")
 
     def collect(self):
-        branch = os.getenv("BRANCH")
+        branch = os.getenv("BRANCH_NAME")
         scenarios = []
         parents_display_names = {}
         root_path = self.sphinx_dir.rsplit("/", maxsplit=1)[0]

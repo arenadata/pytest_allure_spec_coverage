@@ -148,13 +148,13 @@ def test_sphinx_collector_with_endpoint_and_branch(sphinx_collector):
     """
     Test that sphinx scenarios has link
     """
-    os.environ["BRANCH"] = "master"
+    os.environ["BRANCH_NAME"] = "master"
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
         assert scenario.link == f"https://spec.url/{scenario.parents[0].name}/{scenario.id}.html"
 
-    os.environ["BRANCH"] = "feature"
+    os.environ["BRANCH_NAME"] = "feature"
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
