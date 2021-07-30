@@ -79,6 +79,7 @@ def pytest_configure(config: Config) -> None:
         raise UsageError(f"Unexpected collector type, registered ones: {collectors.keys()}")
     sc_type = collectors[config.option.sc_type]
     cfg_provider = ConfigProvider(config.option.sc_cfgpath)
-    collector: Collector = sc_type(config=cfg_provider.config)
-    matcher = ScenariosMatcher(config=cfg_provider.config, reporter=listener.allure_logger, collector=collector)
-    config.pluginmanager.register(matcher, ScenariosMatcher.PLUGIN_NAME)
+    if cfg_provider.config:
+        collector: Collector = sc_type(config=cfg_provider.config)
+        matcher = ScenariosMatcher(config=cfg_provider.config, reporter=listener.allure_logger, collector=collector)
+        config.pluginmanager.register(matcher, ScenariosMatcher.PLUGIN_NAME)

@@ -11,15 +11,13 @@
 # limitations under the License.
 
 """Plugin config provider"""
-
-
+import warnings
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import ClassVar, Mapping
+from typing import ClassVar, Mapping, Optional
 
 import toml
-from _pytest.config.exceptions import UsageError
 
 
 @dataclass
@@ -32,11 +30,12 @@ class ConfigProvider:
     path_to_config_file: Path
 
     @cached_property
-    def config(self) -> Mapping:
+    def config(self) -> Optional[Mapping]:
         """Read all params related to pytest_allure_spec_coverage from pyproject.toml"""
 
         try:
             config = toml.load(self.path_to_config_file / self.FILENAME)
             return config.get("tool", {}).get(self.TOOL_KEY, {})
-        except FileNotFoundError as ex:
-            raise UsageError(f"Unable to load configuration file {self.path_to_config_file}") from ex
+        except FileNotFoundError:
+            warnings.warn(f"Unable to load configuration file {self.path_to_config_file / self.FILENAME}")
+            return None
