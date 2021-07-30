@@ -145,20 +145,27 @@ class ScenariosMatcher:
     def _labels(self, scenario: Scenario, keep_default: bool = True) -> Collection[Label]:
         """Make labels for Allure from the given scenario"""
 
-        groups = (
-            self.config.get("allure_labels", []),
-            self.DEFAULT_LABELS if keep_default else [],
-        )
+        def shrink_values_by_length(values, expected_length):
+            if len(values) > expected_length:
+                itv = slice(expected_length - 1, None)
+                values[itv] = [".".join(values[itv])]
 
-        values = [p.display_name for p in scenario.parents]
-        if len(values) > 3:
-            itv = slice(2, None)
-            values[itv] = [".".join(values[itv])]
+        custom_labels = self.config.get("allure_labels", [])
+        default_labels = self.DEFAULT_LABELS if keep_default else []
+
+        spec_values = [p.display_name for p in scenario.parents[1:]] + [scenario.name]
+        shrink_values_by_length(spec_values, len(custom_labels))
+
+        suite_values = [p.display_name for p in scenario.parents]
+        shrink_values_by_length(suite_values, len(default_labels))
 
         labels = []
-        for group in groups:
-            for label, value in zip(group, values):
-                labels.append(Label(label, value))
+        for label, value in zip(custom_labels, spec_values):
+            labels.append(Label(label, value))
+
+        for label, value in zip(default_labels, suite_values):
+            labels.append(Label(label, value))
+
         return labels
 
     def pytest_configure(self, config: Config):
