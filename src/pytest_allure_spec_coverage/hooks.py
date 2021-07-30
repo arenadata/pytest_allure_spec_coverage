@@ -9,29 +9,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Models for scenario"""
-from dataclasses import dataclass
-from typing import Optional, List
+
+"""Plugin hooks"""
+
+from typing import Mapping
+
+import pytest
+
+from pytest_allure_spec_coverage.models.collector import Collector
 
 
-@dataclass
-class Parent:
-    """Info about scenario parent (used for grouping only)"""
-
-    name: str
-    display_name: str
-
-
-@dataclass
-class Scenario:
-    """Scenario info"""
-
-    id: str  # pylint: disable=invalid-name
-    name: str
-    display_name: str
-    parents: List[Parent]
-    link: Optional[str]
-    branch: Optional[str]
-
-    def __hash__(self) -> int:
-        return hash(self.id)
+@pytest.hookimpl()
+def pytest_register_spec_collectors(collectors: Mapping[str, Collector]) -> None:  # pylint: disable=unused-argument
+    """Register available spec collectors"""

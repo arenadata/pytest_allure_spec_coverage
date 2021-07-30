@@ -45,7 +45,7 @@ class SphinxCollector(Collector):
     def setup_config(self):
         if "sphinx_dir" not in self.config:
             raise ValueError("Option sphinx_dir is required")
-        sphinx_dir = self.config.get("sphinx_dir")
+        sphinx_dir = self.config["sphinx_dir"]
         if not os.path.exists(sphinx_dir):
             raise ValueError(f"Directory with sphinx specs {sphinx_dir} doesn't exists")
 
@@ -71,12 +71,13 @@ class SphinxCollector(Collector):
             for file in filter(lambda f: f.endswith(".rst"), files):
                 name = file.rsplit(".", maxsplit=1)[0]
                 display_name = self._get_title_from_rst(os.path.join(root, file)) or file
-
+                parents = self._get_parents_by_fullname(parent_name, parents_display_names)
                 scenarios.append(
                     Scenario(
+                        id="/".join([*[p.name for p in parents[1:]], name]),  # Do not use root folder on scenario id
                         name=name,
                         display_name=display_name,
-                        parents=self._get_parents_by_fullname(parent_name, parents_display_names),
+                        parents=parents,
                         link=self._create_link(name, parent_name, branch),
                         branch=branch,
                     )
