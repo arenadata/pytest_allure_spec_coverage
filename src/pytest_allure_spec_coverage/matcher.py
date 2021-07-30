@@ -153,7 +153,7 @@ class ScenariosMatcher:
         custom_labels = self.config.get("allure_labels", [])
         default_labels = self.DEFAULT_LABELS if keep_default else []
 
-        spec_values = [p.display_name for p in scenario.parents[1:]] + [scenario.name]
+        spec_values = [p.display_name for p in scenario.parents[1:]] + [scenario.display_name]
         shrink_values_by_length(spec_values, len(custom_labels))
 
         suite_values = [p.display_name for p in scenario.parents]
