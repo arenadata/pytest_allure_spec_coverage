@@ -178,7 +178,13 @@ class ScenariosMatcher:
         self.match(items)
         self.mark()
 
-    def pytest_sessionfinish(self) -> None:
+    def pytest_sessionfinish(self, session: pytest.Session) -> None:
         """Add entries to report after session complete"""
-
+        try:
+            import xdist  # pylint: disable=import-outside-toplevel
+        except ImportError:
+            pass
+        else:
+            if xdist.get_xdist_worker_id(session) not in ["master", "gw0"]:
+                return
         self.report()
