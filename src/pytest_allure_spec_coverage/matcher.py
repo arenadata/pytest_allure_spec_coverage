@@ -120,7 +120,7 @@ class ScenariosMatcher:
         fake_uuid = uuid4()
         fake_result = TestResult(
             uuid=fake_uuid,
-            name=scenario.name,
+            name=scenario.display_name,
             status=Status.UNKNOWN,
             labels=self._labels(scenario),
             links=self._links(scenario),
