@@ -19,6 +19,7 @@ import pytest
 from _pytest.config import Config
 from _pytest.config.argparsing import Parser
 from _pytest.config.exceptions import UsageError
+from _pytest.terminal import TerminalReporter
 from allure_pytest.listener import AllureListener
 from pluggy.manager import PluginManager
 
@@ -82,3 +83,47 @@ def pytest_configure(config: Config) -> None:
     collector: Collector = sc_type(config=cfg_provider.config)
     matcher = ScenariosMatcher(config=cfg_provider.config, reporter=listener.allure_logger, collector=collector)
     config.pluginmanager.register(matcher, ScenariosMatcher.PLUGIN_NAME)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_terminal_summary(terminalreporter: TerminalReporter, config: Config):
+    """
+    Add coverage summary section to terminal reporter
+    """
+    if matcher := config.pluginmanager.get_plugin(ScenariosMatcher.PLUGIN_NAME):
+        matcher: ScenariosMatcher
+        coverage_percent = int((len(matcher.scenarios) - len(tuple(matcher.missed))) / len(matcher.scenarios) * 100)
+        report_color = _select_report_color(coverage_percent)
+        terminalreporter.section("coverage summary", **{report_color: True})
+        terminalreporter.write(f"Coverage percent: {coverage_percent}%\n", **{report_color: True}, bold=True)
+
+
+def _select_report_color(coverage_percent: int):
+    """
+    >>> _select_report_color(0)
+    'red'
+    >>> _select_report_color(50)
+    'red'
+    >>> _select_report_color(84)
+    'red'
+    >>> _select_report_color(85)
+    'yellow'
+    >>> _select_report_color(90)
+    'yellow'
+    >>> _select_report_color(99)
+    'yellow'
+    >>> _select_report_color(100)
+    'green'
+    >>> _select_report_color(101) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: Invalid value: coverage_percent=101
+    """
+    percents_colors = {
+        84: "red",
+        99: "yellow",
+        100: "green",
+    }
+    for percent, color in percents_colors.items():
+        if coverage_percent <= percent:
+            return color
+    raise ValueError(f"Invalid value: {coverage_percent=}")
