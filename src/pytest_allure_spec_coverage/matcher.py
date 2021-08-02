@@ -11,6 +11,7 @@
 # limitations under the License.
 
 """Matcher of tests cases and scenarios"""
+import itertools
 from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Dict
@@ -40,7 +41,7 @@ def safe_get_marker(item: Item, name: str) -> Mark:
 def scenario_ids(item: Item) -> Iterable[str]:
     """Get scenario identifiers from pytest.Item"""
 
-    return safe_get_marker(item, ScenariosMatcher.MARKER_NAME).args
+    return itertools.chain.from_iterable(mark.args for mark in item.iter_markers(ScenariosMatcher.MARKER_NAME))
 
 
 def _select_report_color(spec_coverage_percent: int):
