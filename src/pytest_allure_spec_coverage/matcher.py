@@ -11,10 +11,9 @@
 # limitations under the License.
 
 """Matcher of tests cases and scenarios"""
-
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple
+from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Dict
 
 import pytest
 from _pytest.config import Config
@@ -63,16 +62,40 @@ def _select_report_color(spec_coverage_percent: int):
     >>> _select_report_color(101) # doctest: +IGNORE_EXCEPTION_DETAIL
     Traceback (most recent call last):
     ValueError: Invalid value: coverage_percent=101
+    >>> _select_report_color(-1) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: Invalid value: coverage_percent=-1
     """
     percents_colors = {
         84: "red",
         99: "yellow",
         100: "green",
     }
-    for percent, color in percents_colors.items():
-        if spec_coverage_percent <= percent:
-            return color
+    if spec_coverage_percent >= 0:
+        for percent, color in percents_colors.items():
+            if spec_coverage_percent <= percent:
+                return color
     raise ValueError(f"Invalid value: {spec_coverage_percent=}")
+
+
+def _build_summary_stats_line(
+    spec_coverage_percent: int, main_parts: List[Tuple[str, Dict[str, bool]]], main_color: str
+) -> Callable:
+    """
+    This function needs to be called by default pytest TerminalReporter
+    for specification coverage percent in the summary stats line
+    """
+    def _wrapped():
+        report_color = _select_report_color(spec_coverage_percent)
+        main_parts.append(
+            (
+                f"{spec_coverage_percent}% specification coverage",
+                {report_color: True}
+            )
+        )
+        return main_parts, main_color
+
+    return _wrapped
 
 
 @dataclass(eq=False)
@@ -228,12 +251,13 @@ class ScenariosMatcher:
                 return
         self.report()
 
-    @pytest.hookimpl(trylast=True)
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
         """
         Add specification coverage summary section to terminal reporter
         """
-        spec_c_percent = int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
-        report_color = _select_report_color(spec_c_percent)
-        terminalreporter.section("specification coverage summary", **{report_color: True})
-        terminalreporter.write(f"Spec coverage percent: {spec_c_percent}%\n", **{report_color: True}, bold=True)
+        spec_coverage_percent = int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
+
+        main_parts, main_color = terminalreporter.build_summary_stats_line()
+        terminalreporter.build_summary_stats_line = _build_summary_stats_line(
+            spec_coverage_percent, main_parts, main_color
+        )
