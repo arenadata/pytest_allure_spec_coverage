@@ -110,7 +110,7 @@ def test_config_provider_loading(config_provider: ConfigProvider):
 
 
 @pytest.mark.parametrize(
-    "pyproject_toml", [{"sphinx_dir": "tests/sphinx_spec/scenarios"}], ids=["simple_scenarios"], indirect=True
+    "pyproject_toml", [{"sphinx-dir": "tests/sphinx_spec/scenarios"}], ids=["simple_scenarios"], indirect=True
 )
 def test_sphinx_collector(sphinx_collector):
     """Test that sphinx scenarios collected"""
@@ -121,7 +121,7 @@ def test_sphinx_collector(sphinx_collector):
 @pytest.mark.parametrize(
     "pyproject_toml",
     [
-        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
+        {"sphinx-dir": "tests/sphinx_spec/scenarios", "spec-endpoint": "https://spec.url"},
     ],
     ids=["with_endpoint"],
     indirect=True,
@@ -139,7 +139,7 @@ def test_sphinx_collector_with_endpoint(sphinx_collector):
 @pytest.mark.parametrize(
     "pyproject_toml",
     [
-        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
+        {"sphinx-dir": "tests/sphinx_spec/scenarios", "spec-endpoint": "https://spec.url"},
     ],
     ids=["with_endpoint_and_branch"],
     indirect=True,

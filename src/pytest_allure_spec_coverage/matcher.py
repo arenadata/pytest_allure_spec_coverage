@@ -20,6 +20,7 @@ import pytest
 from _pytest.config import Config
 from _pytest.mark.structures import Mark
 from _pytest.nodes import Item
+from _pytest.terminal import TerminalReporter
 from allure_commons.model2 import Label, Link, Status, TestResult
 from allure_commons.reporter import AllureReporter
 from allure_commons.types import LabelType, LinkType
@@ -41,6 +42,37 @@ def scenario_ids(item: Item) -> Iterable[str]:
     """Get scenario identifiers from pytest.Item"""
 
     return safe_get_marker(item, ScenariosMatcher.MARKER_NAME).args
+
+
+def _select_report_color(spec_coverage_percent: int):
+    """
+    >>> _select_report_color(0)
+    'red'
+    >>> _select_report_color(50)
+    'red'
+    >>> _select_report_color(84)
+    'red'
+    >>> _select_report_color(85)
+    'yellow'
+    >>> _select_report_color(90)
+    'yellow'
+    >>> _select_report_color(99)
+    'yellow'
+    >>> _select_report_color(100)
+    'green'
+    >>> _select_report_color(101) # doctest: +IGNORE_EXCEPTION_DETAIL
+    Traceback (most recent call last):
+    ValueError: Invalid value: coverage_percent=101
+    """
+    percents_colors = {
+        84: "red",
+        99: "yellow",
+        100: "green",
+    }
+    for percent, color in percents_colors.items():
+        if spec_coverage_percent <= percent:
+            return color
+    raise ValueError(f"Invalid value: {spec_coverage_percent=}")
 
 
 @dataclass(eq=False)
@@ -195,3 +227,13 @@ class ScenariosMatcher:
             if xdist.get_xdist_worker_id(session) not in ["master", "gw0"]:
                 return
         self.report()
+
+    @pytest.hookimpl(trylast=True)
+    def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
+        """
+        Add specification coverage summary section to terminal reporter
+        """
+        spec_c_percent = int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
+        report_color = _select_report_color(spec_c_percent)
+        terminalreporter.section("specification coverage summary", **{report_color: True})
+        terminalreporter.write(f"Spec coverage percent: {spec_c_percent}%\n", **{report_color: True}, bold=True)

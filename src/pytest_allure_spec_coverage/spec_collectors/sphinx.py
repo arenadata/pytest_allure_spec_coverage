@@ -43,15 +43,14 @@ class SphinxCollector(Collector):
     default_branch: str
 
     def setup_config(self):
-        if "sphinx_dir" not in self.config:
-            raise ValueError("Option sphinx_dir is required")
-        sphinx_dir = self.config["sphinx_dir"]
+        if not (sphinx_dir := self.config.get("sphinx-dir")):  # pylint: disable = superfluous-parens
+            raise ValueError("Option sphinx-dir is required")
         if not os.path.exists(sphinx_dir):
             raise ValueError(f"Directory with sphinx specs {sphinx_dir} doesn't exists")
 
         self.sphinx_dir = sphinx_dir
-        self.spec_endpoint = self.config.get("spec_endpoint")
-        self.default_branch = self.config.get("default_branch", "master")
+        self.spec_endpoint = self.config.get("spec-endpoint")
+        self.default_branch = self.config.get("default-branch", "master")
 
     def collect(self):
         branch = os.getenv("BRANCH_NAME")
