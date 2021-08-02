@@ -85,14 +85,10 @@ def _build_summary_stats_line(
     This function needs to be called by default pytest TerminalReporter
     for specification coverage percent in the summary stats line
     """
+
     def _wrapped():
         report_color = _select_report_color(spec_coverage_percent)
-        main_parts.append(
-            (
-                f"{spec_coverage_percent}% specification coverage",
-                {report_color: True}
-            )
-        )
+        main_parts.append((f"{spec_coverage_percent}% specification coverage", {report_color: True}))
         return main_parts, main_color
 
     return _wrapped
@@ -253,7 +249,7 @@ class ScenariosMatcher:
 
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
         """
-        Add specification coverage summary section to terminal reporter
+        Add specification coverage percent to summary stats line
         """
         spec_coverage_percent = int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
 
