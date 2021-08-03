@@ -18,7 +18,6 @@ from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tupl
 
 import pytest
 from _pytest.config import Config
-from _pytest.mark.structures import Mark
 from _pytest.nodes import Item
 from _pytest.terminal import TerminalReporter
 from allure_commons.model2 import Label, Link, Status, TestResult
@@ -29,13 +28,6 @@ from allure_pytest.utils import ALLURE_LABEL_MARK, ALLURE_LINK_MARK
 
 from .models.collector import Collector
 from .models.scenario import Scenario
-
-
-def safe_get_marker(item: Item, name: str) -> Mark:
-    """Safely get pytest.Item marker"""
-
-    stub_marker = Mark(name="stub", args=(), kwargs={})
-    return item.get_closest_marker(name, stub_marker)
 
 
 def scenario_ids(item: Item) -> Iterable[str]:
