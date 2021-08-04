@@ -13,28 +13,20 @@
 """Plugin config provider"""
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
-from typing import ClassVar, Mapping
-
-import toml
-from _pytest.config import UsageError
+from _pytest.config import Config
 
 
 @dataclass
 class ConfigProvider:
-    """Provides config for the plugin via parsing pyproject.toml file"""
+    """Provides config for the plugin from pytest config object"""
 
-    TOOL_KEY: ClassVar[str] = "pytest_allure_spec_coverage"
-    FILENAME: ClassVar[str] = "pyproject.toml"
+    pytest_config: Config
 
-    path_to_config_file: Path
+    def get(self, name: str):
+        """Get option by name"""
+        return self.pytest_config.getini(name)
 
     @cached_property
-    def config(self) -> Mapping:
-        """Read all params related to pytest_allure_spec_coverage from pyproject.toml"""
-
-        try:
-            config = toml.load(self.path_to_config_file / self.FILENAME)
-            return config.get("tool", {}).get(self.TOOL_KEY, {})
-        except FileNotFoundError as ex:
-            raise UsageError(f"Unable to load configuration file {self.path_to_config_file}") from ex
+    def root(self):
+        """Get config root path"""
+        return self.pytest_config.rootpath

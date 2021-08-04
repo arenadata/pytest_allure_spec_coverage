@@ -14,7 +14,7 @@
 import itertools
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Dict
+from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Dict, Type
 
 import pytest
 from _pytest.config import Config
@@ -26,6 +26,7 @@ from allure_commons.types import LabelType, LinkType
 from allure_commons.utils import uuid4
 from allure_pytest.utils import ALLURE_LABEL_MARK, ALLURE_LINK_MARK
 
+from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
 
@@ -100,8 +101,8 @@ class ScenariosMatcher:
         LabelType.SUB_SUITE,
     )
 
-    config: Mapping
-    collector: Collector
+    config: ConfigProvider
+    collector: Type[Collector]
     reporter: AllureReporter
 
     scenarios: Collection[Scenario] = field(default_factory=list)
@@ -139,7 +140,7 @@ class ScenariosMatcher:
         item.add_marker(
             link_marker(
                 scenario.link,
-                name=self.config.get("link_label", "Scenario"),
+                name=self.config.get("link_label"),
                 link_type=LinkType.LINK,
             )
         )
@@ -181,7 +182,7 @@ class ScenariosMatcher:
         return [
             Link(
                 url=scenario.link,
-                name=self.config.get("link_label", "Scenario"),
+                name=self.config.get("link_label"),
                 type=LinkType.LINK,
             )
         ]
@@ -194,7 +195,7 @@ class ScenariosMatcher:
                 itv = slice(expected_length - 1, None)
                 values[itv] = [".".join(values[itv])]
 
-        custom_labels = self.config.get("allure_labels", [])
+        custom_labels = self.config.get("allure_labels")
         default_labels = self.DEFAULT_LABELS if keep_default else []
 
         spec_values = [p.display_name for p in scenario.parents[1:]] + [scenario.display_name]
@@ -220,7 +221,7 @@ class ScenariosMatcher:
     def pytest_sessionstart(self):
         """Collect scenarios on session start"""
 
-        self.scenarios = self.collector.collect()
+        self.scenarios = self.collector(config=self.config).collect()
 
     @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self, items: List[pytest.Item]) -> None:
