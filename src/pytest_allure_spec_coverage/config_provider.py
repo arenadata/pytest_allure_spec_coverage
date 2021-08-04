@@ -25,6 +25,7 @@ class ConfigProvider:
         """Get option by name"""
         return self.pytest_config.getini(name)
 
+    @property
     def root(self):
         """Get config root path"""
         return self.pytest_config.rootpath
