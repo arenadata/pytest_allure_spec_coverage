@@ -12,7 +12,6 @@
 
 """Plugin config provider"""
 from dataclasses import dataclass
-from functools import cached_property
 from _pytest.config import Config
 
 
@@ -26,7 +25,6 @@ class ConfigProvider:
         """Get option by name"""
         return self.pytest_config.getini(name)
 
-    @cached_property
     def root(self):
         """Get config root path"""
         return self.pytest_config.rootpath

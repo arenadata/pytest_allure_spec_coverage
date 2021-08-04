@@ -11,7 +11,7 @@
 # limitations under the License.
 
 """Main plugin module"""
-import dataclasses
+from dataclasses import dataclass
 from typing import MutableMapping, Optional, Type, Iterable
 
 import pytest
@@ -54,7 +54,7 @@ def pytest_register_spec_collectors(collectors: CollectorsMapping) -> None:
     collectors["sphinx"] = SphinxCollector
 
 
-@dataclasses.dataclass(eq=False)
+@dataclass(eq=False)
 class CollectorsPlugin:
     """Simple plugin to register all collector options"""
 
