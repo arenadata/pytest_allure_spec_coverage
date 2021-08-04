@@ -13,6 +13,8 @@
 import os
 import warnings
 from typing import Optional
+
+from _pytest.config.argparsing import Parser
 from docutils.core import publish_doctree
 from docutils.utils import SystemMessage
 
@@ -42,15 +44,30 @@ class SphinxCollector(Collector):
     spec_endpoint: Optional[str]
     default_branch: str
 
+    @staticmethod
+    def addoption(parser: Parser):
+        parser.addini("sphinx_dir", help="Directory with the .rst scenarios", type="string")
+        parser.addini(
+            "spec_endpoint",
+            help="Where is hosted your scenarios. Need to form scenario link. Optionally",
+            type="string",
+            default=None,
+        )
+        parser.addini(
+            "default_branch", help="Need to form scenario link. 'master' by default", type="string", default="master"
+        )
+
     def setup_config(self):
-        if not (sphinx_dir := self.config.get("sphinx-dir")):  # pylint: disable = superfluous-parens
-            raise ValueError("Option sphinx-dir is required")
+        if not (sphinx_dir := self.config.get("sphinx_dir")):  # pylint: disable = superfluous-parens
+            raise ValueError("Option sphinx_dir is required")
+        if not os.path.isabs(sphinx_dir):
+            sphinx_dir = os.path.join(self.config.root, sphinx_dir)
         if not os.path.exists(sphinx_dir):
             raise ValueError(f"Directory with sphinx specs {sphinx_dir} doesn't exists")
 
         self.sphinx_dir = sphinx_dir
-        self.spec_endpoint = self.config.get("spec-endpoint")
-        self.default_branch = self.config.get("default-branch", "master")
+        self.spec_endpoint = self.config.get("spec_endpoint")
+        self.default_branch = self.config.get("default_branch")
 
     def collect(self):
         branch = os.getenv("BRANCH_NAME")

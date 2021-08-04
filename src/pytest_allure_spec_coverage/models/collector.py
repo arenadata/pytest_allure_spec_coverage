@@ -12,8 +12,11 @@
 """Abstract collector"""
 
 from abc import ABC, abstractmethod
-from typing import List, Mapping
+from typing import List
 
+from _pytest.config.argparsing import Parser
+
+from pytest_allure_spec_coverage.config_provider import ConfigProvider
 from pytest_allure_spec_coverage.models.scenario import Scenario
 
 
@@ -22,7 +25,7 @@ class Collector(ABC):
     Abstract collector
     """
 
-    def __init__(self, config: Mapping):
+    def __init__(self, config: ConfigProvider):
         self.config = config
         self.setup_config()
 
@@ -42,3 +45,8 @@ class Collector(ABC):
         Raises:
             ValueError: if config validation fails
         """
+
+    @staticmethod
+    @abstractmethod
+    def addoption(parser: Parser):
+        """Implementation of pytest_addoption hook"""

@@ -11,9 +11,8 @@
 # limitations under the License.
 
 """Main plugin module"""
-
-from pathlib import Path
-from typing import MutableMapping, Optional, Type
+from dataclasses import dataclass
+from typing import MutableMapping, Optional, Type, Iterable
 
 import pytest
 from _pytest.config import Config
@@ -43,19 +42,28 @@ def pytest_addoption(parser: Parser) -> None:
     """Register plugin options"""
 
     parser.addoption("--sc-type", action="store", type=str, help="Spec collector type string identifier")
-    parser.addoption(
-        "--sc-cfgpath",
-        action="store",
-        type=Path,
-        default=Path(),
-        help="Path to spec collector configuration file",
+    parser.addini(
+        "allure_labels", "What labels to use for spec tree. Example: epic, feature, story", type="linelist", default=[]
     )
+    parser.addini("link_label", "What link label to be", type="string", default="Scenario")
 
 
 def pytest_register_spec_collectors(collectors: CollectorsMapping) -> None:
     """Register available spec collectors"""
 
     collectors["sphinx"] = SphinxCollector
+
+
+@dataclass(eq=False)
+class CollectorsPlugin:
+    """Simple plugin to register all collector options"""
+
+    collectors: Iterable[Type[Collector]]
+
+    def pytest_addoption(self, parser: Parser) -> None:
+        """Register plugin options"""
+        for collector in self.collectors:
+            collector.addoption(parser)
 
 
 @pytest.hookimpl(trylast=True)
@@ -70,15 +78,16 @@ def pytest_configure(config: Config) -> None:
         None,
     )
 
+    collectors: CollectorsMapping = {}
+    config.hook.pytest_register_spec_collectors(collectors=collectors)
+    config.pluginmanager.register(CollectorsPlugin(collectors=collectors.values()))
+
     if not listener or not config.option.sc_type:
         return
 
-    collectors: CollectorsMapping = {}
-    config.hook.pytest_register_spec_collectors(collectors=collectors)
     if config.option.sc_type not in collectors.keys():
         raise UsageError(f"Unexpected collector type, registered ones: {collectors.keys()}")
+    cfg_provider = ConfigProvider(pytest_config=config)
     sc_type = collectors[config.option.sc_type]
-    cfg_provider = ConfigProvider(config.option.sc_cfgpath)
-    collector: Collector = sc_type(config=cfg_provider.config)
-    matcher = ScenariosMatcher(config=cfg_provider.config, reporter=listener.allure_logger, collector=collector)
+    matcher = ScenariosMatcher(config=cfg_provider, reporter=listener.allure_logger, collector=sc_type)
     config.pluginmanager.register(matcher, ScenariosMatcher.PLUGIN_NAME)

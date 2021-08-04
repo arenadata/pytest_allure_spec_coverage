@@ -11,12 +11,11 @@
 # limitations under the License.
 """Test that spec collectors is ok"""
 # pylint: disable=redefined-outer-name,unused-argument
+import dataclasses
 import os
-from pathlib import Path
-from typing import Mapping
 
 import pytest
-import toml
+
 from pytest_allure_spec_coverage.config_provider import ConfigProvider
 from pytest_allure_spec_coverage.models.collector import Collector
 from pytest_allure_spec_coverage.models.scenario import Parent, Scenario
@@ -66,51 +65,42 @@ class TestCollector(Collector):
     def setup_config(self):
         """Nothing to do"""
 
-
-@pytest.fixture()
-def pyproject_toml(request):
-    """pyproject content"""
-    if not hasattr(request, "param"):
-        raise ValueError("Please parametrize fixture by pyproject config value")
-    return {"tool": {"pytest_allure_spec_coverage": request.param}}
+    @staticmethod
+    def addoption(parser):
+        """Nothing to do"""
 
 
-@pytest.fixture()
-def collector_config_path(pyproject_toml: Mapping, tmpdir):
-    """Returns path to pyproject config file"""
-    config_path = os.path.join(tmpdir, "pyproject.toml")
-    with open(config_path, "w") as config_file:
-        toml.dump(pyproject_toml, config_file)
-    return config_path
+@dataclasses.dataclass
+class TestConfigProvider(ConfigProvider):
+    """Test config provider for support config parametrization"""
+
+    test_config: dict
+    pytest_config: dict
+
+    def get(self, name: str):
+        return self.test_config.get(name) or super().get(name)
 
 
 @pytest.fixture()
-def config_provider(collector_config_path: str):
+def config_provider(request):
     """Config provider"""
-    path = Path(collector_config_path).parent
-    return ConfigProvider(path)
+    return TestConfigProvider(test_config=getattr(request, "param", {}), pytest_config=request.config)
 
 
 @pytest.fixture()
 def test_collector(config_provider: ConfigProvider):
     """Simple test collector"""
-    return TestCollector(config=config_provider.config)
+    return TestCollector(config=config_provider)
 
 
 @pytest.fixture()
 def sphinx_collector(config_provider: ConfigProvider):
     """Prepared sphinx collector"""
-    return SphinxCollector(config=config_provider.config)
-
-
-@pytest.mark.parametrize("pyproject_toml", [{"option": "value"}], ids=["simple_config"], indirect=True)
-def test_config_provider_loading(config_provider: ConfigProvider):
-    """Test that pyproject.toml load successful"""
-    assert config_provider.config.get("option") == "value", "Option from config not found"
+    return SphinxCollector(config=config_provider)
 
 
 @pytest.mark.parametrize(
-    "pyproject_toml", [{"sphinx-dir": "tests/sphinx_spec/scenarios"}], ids=["simple_scenarios"], indirect=True
+    "config_provider", [{"sphinx_dir": "tests/sphinx_spec/scenarios"}], ids=["simple_scenarios"], indirect=True
 )
 def test_sphinx_collector(sphinx_collector):
     """Test that sphinx scenarios collected"""
@@ -119,9 +109,9 @@ def test_sphinx_collector(sphinx_collector):
 
 
 @pytest.mark.parametrize(
-    "pyproject_toml",
+    "config_provider",
     [
-        {"sphinx-dir": "tests/sphinx_spec/scenarios", "spec-endpoint": "https://spec.url"},
+        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
     ],
     ids=["with_endpoint"],
     indirect=True,
@@ -137,9 +127,9 @@ def test_sphinx_collector_with_endpoint(sphinx_collector):
 
 
 @pytest.mark.parametrize(
-    "pyproject_toml",
+    "config_provider",
     [
-        {"sphinx-dir": "tests/sphinx_spec/scenarios", "spec-endpoint": "https://spec.url"},
+        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
     ],
     ids=["with_endpoint_and_branch"],
     indirect=True,
