@@ -81,6 +81,7 @@ def pytest_configure(config: Config) -> None:
     collectors: CollectorsMapping = {}
     config.hook.pytest_register_spec_collectors(collectors=collectors)
     config.pluginmanager.register(CollectorsPlugin(collectors=collectors.values()))
+    config.addinivalue_line("markers", f"{ScenariosMatcher.MARKER_NAME}(link): test function scenario link")
 
     if not listener or not config.option.sc_type:
         return

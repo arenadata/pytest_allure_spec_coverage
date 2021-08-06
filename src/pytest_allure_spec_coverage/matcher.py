@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Dict, Type
 
 import pytest
-from _pytest.config import Config
 from _pytest.nodes import Item
 from _pytest.terminal import TerminalReporter
 from allure_commons.model2 import Label, Link, Status, TestResult
@@ -212,11 +211,6 @@ class ScenariosMatcher:
             labels.append(Label(label, value))
 
         return labels
-
-    def pytest_configure(self, config: Config):
-        """Add custom markers"""
-
-        config.addinivalue_line("markers", f"{self.MARKER_NAME}(link): test function scenario link")
 
     def pytest_sessionstart(self):
         """Collect scenarios on session start"""
