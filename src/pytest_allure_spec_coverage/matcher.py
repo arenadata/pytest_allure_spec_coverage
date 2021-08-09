@@ -72,7 +72,8 @@ def _select_report_color(spec_coverage_percent: int):
 
 
 def _build_summary_stats_line(
-    build_summary_stats_line: Callable, spec_coverage_percent: int,
+    build_summary_stats_line: Callable,
+    spec_coverage_percent: int,
 ) -> Callable:
     """
     This function needs to be called by default pytest TerminalReporter
