@@ -14,7 +14,7 @@
 import itertools
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Dict, Type
+from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Type
 
 import pytest
 from _pytest.nodes import Item
@@ -72,7 +72,7 @@ def _select_report_color(spec_coverage_percent: int):
 
 
 def _build_summary_stats_line(
-    spec_coverage_percent: int, main_parts: List[Tuple[str, Dict[str, bool]]], main_color: str
+    build_summary_stats_line: Callable, spec_coverage_percent: int,
 ) -> Callable:
     """
     This function needs to be called by default pytest TerminalReporter
@@ -80,6 +80,7 @@ def _build_summary_stats_line(
     """
 
     def _wrapped():
+        main_parts, main_color = build_summary_stats_line()
         report_color = _select_report_color(spec_coverage_percent)
         main_parts.append((f"{spec_coverage_percent}% specification coverage", {report_color: True}))
         return main_parts, main_color
@@ -241,7 +242,6 @@ class ScenariosMatcher:
         """
         spec_coverage_percent = int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
 
-        main_parts, main_color = terminalreporter.build_summary_stats_line()
         terminalreporter.build_summary_stats_line = _build_summary_stats_line(
-            spec_coverage_percent, main_parts, main_color
+            terminalreporter.build_summary_stats_line, spec_coverage_percent
         )
