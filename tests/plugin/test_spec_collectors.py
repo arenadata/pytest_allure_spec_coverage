@@ -13,6 +13,7 @@
 # pylint: disable=redefined-outer-name,unused-argument
 import dataclasses
 import os
+from pathlib import Path
 
 import pytest
 
@@ -20,6 +21,9 @@ from pytest_allure_spec_coverage.config_provider import ConfigProvider
 from pytest_allure_spec_coverage.models.collector import Collector
 from pytest_allure_spec_coverage.models.scenario import Parent, Scenario
 from pytest_allure_spec_coverage.spec_collectors import SphinxCollector
+
+CURR_DIR = Path(__file__).parent
+SPEC_DIR = str(CURR_DIR / ".." / "_data" / "sphinx_spec" / "scenarios")
 
 SCENARIOS = [
     Scenario(
@@ -99,9 +103,7 @@ def sphinx_collector(config_provider: ConfigProvider):
     return SphinxCollector(config=config_provider)
 
 
-@pytest.mark.parametrize(
-    "config_provider", [{"sphinx_dir": "tests/sphinx_spec/scenarios"}], ids=["simple_scenarios"], indirect=True
-)
+@pytest.mark.parametrize("config_provider", [{"sphinx_dir": SPEC_DIR}], ids=["simple_scenarios"], indirect=True)
 def test_sphinx_collector(sphinx_collector):
     """Test that sphinx scenarios collected"""
     scenarios = sphinx_collector.collect()
@@ -110,9 +112,7 @@ def test_sphinx_collector(sphinx_collector):
 
 @pytest.mark.parametrize(
     "config_provider",
-    [
-        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
-    ],
+    [{"sphinx_dir": SPEC_DIR, "spec_endpoint": "https://spec.url"}],
     ids=["with_endpoint"],
     indirect=True,
 )
@@ -128,9 +128,7 @@ def test_sphinx_collector_with_endpoint(sphinx_collector):
 
 @pytest.mark.parametrize(
     "config_provider",
-    [
-        {"sphinx_dir": "tests/sphinx_spec/scenarios", "spec_endpoint": "https://spec.url"},
-    ],
+    [{"sphinx_dir": SPEC_DIR, "spec_endpoint": "https://spec.url"}],
     ids=["with_endpoint_and_branch"],
     indirect=True,
 )
