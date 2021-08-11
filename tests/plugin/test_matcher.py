@@ -14,6 +14,7 @@
 # pylint: disable=redefined-outer-name
 
 from dataclasses import dataclass, field
+from textwrap import dedent
 from typing import Collection, List, MutableSequence, Optional, Tuple, Type
 
 import allure
@@ -116,14 +117,15 @@ def collector_mock(scenarios: List[Scenario]) -> Type[Collector]:
 @pytest.fixture()
 def _conftest(pytester: Pytester, collector_mock: Type[Collector]) -> None:
     pytest.CollectorMock = collector_mock
-    conftest = """'''Register Collector mock'''
-import pytest
+    conftest = """
+    '''Register Collector mock'''
+    import pytest
 
 
-def pytest_register_spec_collectors(collectors) -> None:
-    collectors["test"] = pytest.CollectorMock
+    def pytest_register_spec_collectors(collectors) -> None:
+        collectors["test"] = pytest.CollectorMock
     """
-    pytester.makeconftest(conftest)
+    pytester.makeconftest(dedent(conftest))
 
 
 @pytest.fixture()
@@ -135,10 +137,13 @@ def custom_labels() -> Collection[str]:
 
 @pytest.fixture()
 def _pytestini(pytester: Pytester, custom_labels: Collection[str]) -> None:
-    inifile = """# Register matcher options
-[pytest]
-allure_labels =
+    inifile = dedent(
+        """
+    # Register matcher options
+    [pytest]
+    allure_labels =
     """
+    )
     for label in custom_labels:
         inifile += f"\t{label}\n"
     pytester.makefile(".ini", pytest=inifile)
@@ -186,7 +191,7 @@ def test_matcher(
     cases, not_implemented = test_cases
     pytester_result, allure_results = run_with_allure(
         pytester=pytester,
-        testfile_path="test_matcher.py",
+        testfile_path="matcher_pytester_test.py",
         additional_opts=["--sc-type=test"],
         outcomes=dict(passed=len(cases)),
     )
