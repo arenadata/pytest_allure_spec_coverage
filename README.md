@@ -14,3 +14,13 @@ pre-commit install
 ```
 
 After this you will see invocation of black and pylint on every commit.
+
+## Run tests
+
+To run tests, execute within project root:
+
+```bash
+pip install -e .
+pytest src/pytest_allure_spec_coverage --doctest-modules --alluredir tests/allure-results -p allure_pytest
+pytest -s -v --showlocals --alluredir tests/allure-results -p allure_pytest
+```
