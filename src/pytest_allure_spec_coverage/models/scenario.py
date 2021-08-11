@@ -11,7 +11,7 @@
 # limitations under the License.
 """Models for scenario"""
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional, Sequence
 
 
 @dataclass
@@ -35,3 +35,15 @@ class Scenario:
 
     def __hash__(self) -> int:
         return hash(self.id)
+
+    @property
+    def specifications_names(self) -> Sequence[str]:
+        """Scenario titles by specifications"""
+
+        return [p.display_name for p in self.parents[1:]] + [self.display_name]
+
+    @property
+    def suites_names(self) -> Sequence[str]:
+        """Scenario titles by suites"""
+
+        return [p.display_name for p in self.parents]

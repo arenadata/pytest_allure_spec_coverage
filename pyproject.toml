@@ -25,3 +25,11 @@ ignore-paths = [
 [tool.pylint.format]
 max-line-length = 120
 max-module-lines = 1000
+
+[tool.isort]
+line_length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests/plugin"]
+pytester_example_dir = "tests/_data"
+filterwarnings = ["ignore:cannot collect test class:"]

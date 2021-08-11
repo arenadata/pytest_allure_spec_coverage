@@ -14,7 +14,19 @@
 import itertools
 from contextlib import suppress
 from dataclasses import dataclass, field
-from typing import ClassVar, Collection, Iterable, List, Mapping, Optional, Tuple, Callable, Type
+from typing import (
+    Callable,
+    ClassVar,
+    Collection,
+    Iterable,
+    List,
+    Mapping,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+)
 
 import pytest
 from _pytest.nodes import Item
@@ -34,6 +46,47 @@ def scenario_ids(item: Item) -> Iterable[str]:
     """Get scenario identifiers from pytest.Item"""
 
     return itertools.chain.from_iterable(mark.args for mark in item.iter_markers(ScenariosMatcher.MARKER_NAME))
+
+
+def shrink_values_by_length(values: MutableSequence[str], expected_length: int):
+    """Shrink collection to the given length.
+
+    >>> list_ = ["a", "b", "c"]
+    >>> shrink_values_by_length(list_, 2)
+    >>> list_
+    ['a', 'b.c']
+    >>> shrink_values_by_length(list_, 2)
+    >>> list_
+    ['a', 'b.c']
+    >>> shrink_values_by_length(list_, 3)
+    >>> list_
+    ['a', 'b.c']
+    >>> shrink_values_by_length(list_, 0)
+    >>> list_
+    []
+    """
+
+    if not expected_length:
+        values[:] = []
+
+    if len(values) > expected_length:
+        itv = slice(expected_length - 1, None)
+        values[itv] = [".".join(values[itv])]
+
+
+def make_allure_labels(names: Sequence[str], values: Sequence[str]) -> Iterable[Label]:
+    """Generate Allure labels by the given names and values.
+
+    >>> list(make_allure_labels(("a", "b", "c"), ("p", "y", "3")))
+    [Label(name='a', value='p'), Label(name='b', value='y'), Label(name='c', value='3')]
+    >>> list(make_allure_labels(("a", "b", "c"), ("h", "e", "l", "l", "c")))
+    [Label(name='a', value='h'), Label(name='b', value='e'), Label(name='c', value='l.l.c')]
+    """
+
+    values_copy = list(values)
+    shrink_values_by_length(values_copy, len(names))
+    for name, value in zip(names, values_copy):
+        yield Label(name, value)
 
 
 def _select_report_color(spec_coverage_percent: int):
@@ -191,28 +244,13 @@ class ScenariosMatcher:
     def _labels(self, scenario: Scenario, keep_default: bool = True) -> Collection[Label]:
         """Make labels for Allure from the given scenario"""
 
-        def shrink_values_by_length(values, expected_length):
-            if len(values) > expected_length:
-                itv = slice(expected_length - 1, None)
-                values[itv] = [".".join(values[itv])]
-
         custom_labels = self.config.get("allure_labels")
         default_labels = self.DEFAULT_LABELS if keep_default else []
 
-        spec_values = [p.display_name for p in scenario.parents[1:]] + [scenario.display_name]
-        shrink_values_by_length(spec_values, len(custom_labels))
-
-        suite_values = [p.display_name for p in scenario.parents]
-        shrink_values_by_length(suite_values, len(default_labels))
-
-        labels = []
-        for label, value in zip(custom_labels, spec_values):
-            labels.append(Label(label, value))
-
-        for label, value in zip(default_labels, suite_values):
-            labels.append(Label(label, value))
-
-        return labels
+        return (
+            *make_allure_labels(default_labels, scenario.suites_names),
+            *make_allure_labels(custom_labels, scenario.specifications_names),
+        )
 
     def pytest_sessionstart(self):
         """Collect scenarios on session start"""
