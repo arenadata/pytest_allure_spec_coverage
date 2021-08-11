@@ -97,7 +97,7 @@ def test_cases(scenarios: List[Scenario]) -> Tuple[Collection[TestCase], Collect
 def collector_mock(scenarios: List[Scenario]) -> Type[Collector]:
     """Return Collector mock class"""
 
-    class TestCollector(Collector):
+    class CollectorMock(Collector):
         """Collector mock class"""
 
         def collect(self):
@@ -110,18 +110,18 @@ def collector_mock(scenarios: List[Scenario]) -> Type[Collector]:
         def addoption(parser):
             """Does not required"""
 
-    return TestCollector
+    return CollectorMock
 
 
 @pytest.fixture()
 def _conftest(pytester: Pytester, collector_mock: Type[Collector]) -> None:
-    pytest.TestCollector = collector_mock
+    pytest.CollectorMock = collector_mock
     conftest = """'''Register Collector mock'''
 import pytest
 
 
 def pytest_register_spec_collectors(collectors) -> None:
-    collectors["test"] = pytest.TestCollector
+    collectors["test"] = pytest.CollectorMock
     """
     pytester.makeconftest(conftest)
 
