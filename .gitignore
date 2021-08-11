@@ -1,0 +1,26 @@
+# byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# distribution / packaging
+*.egg-info/
+*.egg
+
+# unit test / coverage reports
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ctags
+tags
+
+# dot files
+.*/
+.envrc
+
+# allure
+allure-result*/
