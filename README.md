@@ -21,6 +21,6 @@ To run tests, execute within project root:
 
 ```bash
 pip install -e .
-pytest src/pytest_allure_spec_coverage --doctest-modules --alluredir tests/allure-results -p allure_pytest
-pytest -s -v --showlocals --alluredir tests/allure-results -p allure_pytest
+pytest src/pytest_allure_spec_coverage --doctest-modules --alluredir tests/allure-results
+pytest -s -v --showlocals --alluredir tests/allure-results
 ```
