@@ -11,8 +11,7 @@
 # limitations under the License.
 """Test that spec collectors is ok"""
 # pylint: disable=redefined-outer-name,unused-argument
-import dataclasses
-import os
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -74,7 +73,7 @@ class TestCollector(Collector):
         """Nothing to do"""
 
 
-@dataclasses.dataclass
+@dataclass
 class TestConfigProvider(ConfigProvider):
     """Test config provider for support config parametrization"""
 
@@ -104,8 +103,9 @@ def sphinx_collector(config_provider: ConfigProvider):
 
 
 @pytest.mark.parametrize("config_provider", [{"sphinx_dir": SPEC_DIR}], ids=["simple_scenarios"], indirect=True)
-def test_sphinx_collector(sphinx_collector):
+def test_sphinx_collector(sphinx_collector, monkeypatch):
     """Test that sphinx scenarios collected"""
+    monkeypatch.delenv("BRANCH_NAME", raising=False)
     scenarios = sphinx_collector.collect()
     assert scenarios == SCENARIOS, "Collected scenarios doesn't equal expected"
 
@@ -116,10 +116,11 @@ def test_sphinx_collector(sphinx_collector):
     ids=["with_endpoint"],
     indirect=True,
 )
-def test_sphinx_collector_with_endpoint(sphinx_collector):
+def test_sphinx_collector_with_endpoint(sphinx_collector, monkeypatch):
     """
     Test that sphinx scenarios has link
     """
+    monkeypatch.delenv("BRANCH_NAME", raising=False)
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
@@ -132,17 +133,17 @@ def test_sphinx_collector_with_endpoint(sphinx_collector):
     ids=["with_endpoint_and_branch"],
     indirect=True,
 )
-def test_sphinx_collector_with_endpoint_and_branch(sphinx_collector):
+def test_sphinx_collector_with_endpoint_and_branch(sphinx_collector, monkeypatch):
     """
     Test that sphinx scenarios has link
     """
-    os.environ["BRANCH_NAME"] = "master"
+    monkeypatch.setenv("BRANCH_NAME", "master")
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
         assert scenario.link == f"https://spec.url/{scenario.parents[0].name}/{scenario.id}.html"
 
-    os.environ["BRANCH_NAME"] = "feature"
+    monkeypatch.setenv("BRANCH_NAME", "feature")
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
