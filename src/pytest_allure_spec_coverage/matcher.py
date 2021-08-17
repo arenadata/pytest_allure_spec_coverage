@@ -29,6 +29,7 @@ from typing import (
 )
 
 import pytest
+from _pytest.main import Session
 from _pytest.nodes import Item
 from _pytest.terminal import TerminalReporter
 from allure_commons.model2 import Label, Link, Status, TestResult
@@ -258,14 +259,11 @@ class ScenariosMatcher:
         self.scenarios = self.collector(config=self.config).collect()
 
     @pytest.hookimpl(trylast=True)
-    def pytest_collection_modifyitems(self, items: List[pytest.Item]) -> None:
+    def pytest_collection_modifyitems(self, session: Session, items: List[pytest.Item]) -> None:
         """Collect implemented test cases after items collection complete"""
 
         self.match(items)
         self.mark()
-
-    def pytest_sessionfinish(self, session: pytest.Session) -> None:
-        """Add entries to report after session complete"""
         try:
             import xdist  # pylint: disable=import-outside-toplevel
         except ImportError:
