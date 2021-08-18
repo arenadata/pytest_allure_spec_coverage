@@ -30,8 +30,12 @@ SCENARIOS = [
         name="simple_scenario",
         display_name="Simple scenario",
         parents=[Parent(name="scenarios", display_name="There is some scenarios")],
-        link=None,
-        branch=None,
+    ),
+    Scenario(
+        id="deselected_scenario",
+        name="deselected_scenario",
+        display_name="Deselected scenario",
+        parents=[Parent(name="scenarios", display_name="There is some scenarios")],
     ),
     Scenario(
         id="parent_folder/scenario_with_parent",
@@ -41,8 +45,6 @@ SCENARIOS = [
             Parent(name="scenarios", display_name="There is some scenarios"),
             Parent(name="parent_folder", display_name="Parent folder for scenarios"),
         ],
-        link=None,
-        branch=None,
     ),
     Scenario(
         id="parent_folder/second_level_parent/scenario_with_parents",
@@ -53,8 +55,6 @@ SCENARIOS = [
             Parent(name="parent_folder", display_name="Parent folder for scenarios"),
             Parent(name="second_level_parent", display_name="Second level parent folder"),
         ],
-        link=None,
-        branch=None,
     ),
 ]
 

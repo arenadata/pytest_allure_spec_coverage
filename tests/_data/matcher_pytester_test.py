@@ -42,6 +42,11 @@ def test_duplicated_scenarios_case():
     """Case marked by identical scenarios"""
 
 
+@pytest.mark.scenario("deselected_scenario")
+def test_deselected_scenario_case():
+    """Case that will be deselected but covered scenario"""
+
+
 @pytest.mark.parametrize("param", (1, 2))
 @pytest.mark.scenario("simple_scenario")
 def test_parametrized_case(param):

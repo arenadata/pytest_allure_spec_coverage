@@ -41,7 +41,6 @@ def scenarios() -> List[Scenario]:
                 Parent(name="scenarios", display_name="There is some scenarios"),
             ],
             link="link://simple_scenario",
-            branch=None,
         ),
         Scenario(
             id="nested/scenario",
@@ -52,7 +51,15 @@ def scenarios() -> List[Scenario]:
                 Parent(name="nested", display_name="Nested"),
             ],
             link="link://nested_scenario",
-            branch=None,
+        ),
+        Scenario(
+            id="deselected_scenario",
+            name="deselected_scenario",
+            display_name="Deselected scenario",
+            parents=[
+                Parent(name="scenarios", display_name="There is some scenarios"),
+            ],
+            link="link://deselected_scenario",
         ),
         Scenario(
             id="should_not_be_used",
@@ -62,7 +69,6 @@ def scenarios() -> List[Scenario]:
                 Parent(name="scenarios", display_name="There is some scenarios"),
             ],
             link="link://should_not_be_used",
-            branch=None,
         ),
     ]
 
@@ -73,25 +79,30 @@ class TestCase:
 
     name: str
     matches: List[Scenario] = field(default_factory=list)
+    status: str = "unknown"
 
 
 @pytest.fixture()
-def test_cases(scenarios: List[Scenario]) -> Tuple[Collection[TestCase], Collection[Scenario]]:
+def test_cases(scenarios: List[Scenario]) -> Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]]:
     """Will return test cases collection alongside not implemented scenarios"""
 
-    simple_scenario, nested_scenario, *not_implemented = scenarios
+    simple_scenario, nested_scenario, deselected_scenario, *not_implemented = scenarios
 
     return (
-        TestCase("test_abandoned_case"),
-        TestCase("test_non_existent_scenario_case"),
-        TestCase("test_single_scenario_case", matches=[simple_scenario]),
-        TestCase("test_multiple_scenarios_case", matches=[simple_scenario, nested_scenario]),
-        TestCase("test_duplicated_scenarios_case", matches=[simple_scenario, simple_scenario]),
-        TestCase("test_parametrized_case[1]", matches=[simple_scenario]),
-        TestCase("test_parametrized_case[2]", matches=[simple_scenario]),
-        TestCase("test_one_parameter_marked_only[1]"),
-        TestCase("test_one_parameter_marked_only[2]", matches=[simple_scenario]),
-    ), not_implemented
+        (
+            TestCase("test_abandoned_case"),
+            TestCase("test_non_existent_scenario_case"),
+            TestCase("test_single_scenario_case", matches=[simple_scenario]),
+            TestCase("test_multiple_scenarios_case", matches=[simple_scenario, nested_scenario]),
+            TestCase("test_duplicated_scenarios_case", matches=[simple_scenario, simple_scenario]),
+            TestCase("test_parametrized_case[1]", matches=[simple_scenario]),
+            TestCase("test_parametrized_case[2]", matches=[simple_scenario]),
+            TestCase("test_one_parameter_marked_only[1]"),
+            TestCase("test_one_parameter_marked_only[2]", matches=[simple_scenario]),
+        ),
+        [deselected_scenario],
+        not_implemented,
+    )
 
 
 @pytest.fixture()
@@ -182,17 +193,17 @@ def _has_result(results: MutableSequence[dict], name: str) -> dict:
 @pytest.mark.usefixtures("_conftest", "_pytestini")
 def test_matcher(
     pytester: Pytester,
-    test_cases: Tuple[Collection[TestCase], Collection[Scenario]],
+    test_cases: Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]],
     scenarios: Collection[Scenario],
     custom_labels: Collection[str],
 ):
     """Test matcher"""
 
-    cases, not_implemented = test_cases
+    cases, deselected, not_implemented = test_cases
     pytester_result, allure_results = run_with_allure(
         pytester=pytester,
         testfile_path="matcher_pytester_test.py",
-        additional_opts=["--sc-type=test"],
+        additional_opts=["--sc-type", "test", "-k", "not deselected"],
         outcomes=dict(passed=len(cases)),
     )
 
@@ -204,6 +215,7 @@ def test_matcher(
         )
         for scenario in not_implemented
     ]
+    fake_items.extend([TestCase(name=scenario.display_name, status="skipped") for scenario in deselected])
 
     with allure.step("Check actual test cases"):
         for item in test_items:
@@ -217,7 +229,7 @@ def test_matcher(
     with allure.step("Check fake test cases"):
         for item in fake_items:
             result = _has_result(allure_results.test_cases, item.name)
-            assert result["status"] == "unknown", "Unexpected entry status"
+            assert result["status"] == item.status, "Unexpected entry status"
             for match in item.matches:
                 _has_link(result, match.link)
                 _has_labels(result, custom_labels, match.specifications_names)
