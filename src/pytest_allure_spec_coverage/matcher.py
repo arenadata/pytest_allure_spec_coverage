@@ -249,7 +249,7 @@ class ScenariosMatcher:
 
     def _report_deselected_scenario(self, scenario: Scenario):
         details = StatusDetails(
-            message="Scenario was covered but scenario tests were be deselected",
+            message="Scenario was covered but tests for this scenario were deselected",
             trace="Deselected tests covering this scenario:\n"
             + "\n".join(item.nodeid for item in self.matches[scenario].deselected),
         )
