@@ -30,8 +30,8 @@ class Scenario:
     name: str
     display_name: str
     parents: List[Parent]
-    link: Optional[str]
-    branch: Optional[str]
+    link: Optional[str] = None
+    branch: Optional[str] = None
 
     def __hash__(self) -> int:
         return hash(self.id)

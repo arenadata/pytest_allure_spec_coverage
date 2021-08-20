@@ -32,7 +32,7 @@ import pytest
 from _pytest.main import Session
 from _pytest.nodes import Item
 from _pytest.terminal import TerminalReporter
-from allure_commons.model2 import Label, Link, Status, TestResult
+from allure_commons.model2 import Label, Link, Status, TestResult, StatusDetails
 from allure_commons.reporter import AllureReporter
 from allure_commons.types import LabelType, LinkType
 from allure_commons.utils import uuid4
@@ -143,6 +143,14 @@ def _build_summary_stats_line(
     return _wrapped
 
 
+@dataclass
+class PytestItems:
+    """All pytest items collection - selected and deselected"""
+
+    selected: List[pytest.Item] = field(default_factory=list)
+    deselected: List[pytest.Item] = field(default_factory=list)
+
+
 @dataclass(eq=False)
 class ScenariosMatcher:
     """Match collected test cases with collected scenarios and report missed ones"""
@@ -161,29 +169,47 @@ class ScenariosMatcher:
     reporter: AllureReporter
 
     scenarios: Collection[Scenario] = field(default_factory=list)
-    matches: Mapping[Scenario, List[pytest.Item]] = field(default_factory=dict)
+    matches: Mapping[Scenario, PytestItems] = field(default_factory=dict)
 
     @property
     def missed(self) -> Iterable[Scenario]:
         """Not implemented scenarios"""
 
-        return (scenario for scenario, items in self.matches.items() if not items)
+        return (
+            scenario
+            for scenario, pytest_items in self.matches.items()
+            if not pytest_items.selected and not pytest_items.deselected
+        )
 
-    def match(self, items: List[pytest.Item]) -> None:
+    @property
+    def deselected(self) -> Iterable[Scenario]:
+        """Deselected scenarios"""
+
+        return (
+            scenario
+            for scenario, pytest_items in self.matches.items()
+            if not pytest_items.selected and pytest_items.deselected
+        )
+
+    def match(self, items: List[pytest.Item], deselected=False) -> None:
         """Match collected tests items with its scenarios"""
 
-        self.matches = {sc: [] for sc in self.scenarios}
+        if not self.matches:
+            self.matches = {sc: PytestItems() for sc in self.scenarios}
         sc_lookup = {sc.id: sc for sc in self.scenarios}
         for item in items:
             for key in scenario_ids(item):
                 with suppress(KeyError):
-                    self.matches[sc_lookup[key]].append(item)
+                    if deselected:
+                        self.matches[sc_lookup[key]].deselected.append(item)
+                    else:
+                        self.matches[sc_lookup[key]].selected.append(item)
 
     def mark(self) -> None:
         """Add markers with links to spec for matched items"""
 
-        for scenario, items in self.matches.items():
-            for item in items:
+        for scenario, pytest_items in self.matches.items():
+            for item in pytest_items.selected:
                 self._add_link(scenario, item)
                 self._add_labels(scenario, item)
 
@@ -214,14 +240,28 @@ class ScenariosMatcher:
         """Report about not implemented scenarios"""
 
         for scenario in self.missed:
-            self._report_scenario(scenario)
+            self._report_missed_scenario(scenario)
+        for scenario in self.deselected:
+            self._report_deselected_scenario(scenario)
 
-    def _report_scenario(self, scenario: Scenario) -> None:
+    def _report_missed_scenario(self, scenario: Scenario):
+        self._report_scenario(scenario)
+
+    def _report_deselected_scenario(self, scenario: Scenario):
+        details = StatusDetails(
+            message="Scenario was covered but tests for this scenario were deselected",
+            trace="Deselected tests covering this scenario:\n"
+            + "\n".join(item.nodeid for item in self.matches[scenario].deselected),
+        )
+        self._report_scenario(scenario, status=Status.SKIPPED, status_details=details)
+
+    def _report_scenario(self, scenario: Scenario, status=Status.UNKNOWN, status_details=None) -> None:
         fake_uuid = uuid4()
         fake_result = TestResult(
             uuid=fake_uuid,
             name=scenario.display_name,
-            status=Status.UNKNOWN,
+            status=status,
+            statusDetails=status_details,
             labels=self._labels(scenario),
             links=self._links(scenario),
         )
@@ -272,6 +312,11 @@ class ScenariosMatcher:
             if xdist.get_xdist_worker_id(session) not in ["master", "gw0"]:
                 return
         self.report()
+
+    @pytest.hookimpl(tryfirst=True)
+    def pytest_deselected(self, items: List[pytest.Item]):
+        """Collect deselected tests cases"""
+        self.match(items, deselected=True)
 
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
         """
