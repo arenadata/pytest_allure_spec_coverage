@@ -29,3 +29,8 @@ class ConfigProvider:
     def root(self):
         """Get config root path"""
         return self.pytest_config.rootpath
+
+    @property
+    def fail_under(self):
+        """Fail if spec coverage less than value"""
+        return self.pytest_config.option.sc_only and self.pytest_config.option.sc_target

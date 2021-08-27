@@ -240,3 +240,26 @@ def test_matcher(
     with allure.step("Check summary for coverage percent"):
         percent = (len(scenarios) - len(not_implemented)) * 100 // len(scenarios)
         assert f"{percent}%" in pytester_result.outlines[-1]
+
+
+@pytest.mark.usefixtures("_conftest")
+def test_sc_only(pytester: Pytester):
+    """Test --sc-only and --sc-target options"""
+
+    with allure.step("Assert that --sc-only not running tests"):
+        pytester_result, _ = run_with_allure(
+            pytester=pytester,
+            testfile_path="sc_only_test.py",
+            additional_opts=["--sc-type", "test", "--sc-only"],
+            outcomes={"passed": 0},
+        )
+        assert "_pytest.outcomes.Exit" in pytester_result.outlines[-1]
+        assert "50% specification coverage" in pytester_result.outlines[-2]
+    with allure.step("Assert that --sc-target less than coverage"):
+        pytester_result, _ = run_with_allure(
+            pytester=pytester,
+            testfile_path="sc_only_test.py",
+            additional_opts=["--sc-type", "test", "--sc-only", "--sc-target", "25"],
+            outcomes={"passed": 0},
+        )
+        assert "🎉🎉🎉" in pytester_result.outlines[-1]
