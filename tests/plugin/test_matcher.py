@@ -19,6 +19,7 @@ from typing import Collection, List, MutableSequence, Optional, Tuple, Type
 
 import allure
 import pytest
+from _pytest.config import ExitCode
 from _pytest.pytester import Pytester
 
 from pytest_allure_spec_coverage.matcher import ScenariosMatcher, make_allure_labels
@@ -253,6 +254,7 @@ def test_sc_only(pytester: Pytester):
             additional_opts=["--sc-type", "test", "--sc-only"],
             outcomes={"passed": 0},
         )
+        assert pytester_result.ret == ExitCode.NO_TESTS_COLLECTED
         assert "_pytest.outcomes.Exit" in pytester_result.outlines[-1]
         assert "50% specification coverage" in pytester_result.outlines[-2]
     with allure.step("Assert that --sc-target less than coverage"):

@@ -33,4 +33,5 @@ class ConfigProvider:
     @property
     def fail_under(self):
         """Fail if spec coverage less than value"""
+        # pylint: disable=no-member
         return self.pytest_config.option.sc_only and self.pytest_config.option.sc_target
