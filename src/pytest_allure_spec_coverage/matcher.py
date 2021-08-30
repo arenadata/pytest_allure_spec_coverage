@@ -334,7 +334,7 @@ class ScenariosMatcher:
         if self.config.fail_under and self.spec_coverage_percent < self.config.fail_under:
             pytest.exit(
                 f"Spec coverage percent is {self.spec_coverage_percent}, "
-                f"but is less than target {self.config.fail_under}",
+                f"and it is less than target {self.config.fail_under}",
                 returncode=ExitCode.NO_TESTS_COLLECTED,
             )
 
@@ -352,4 +352,4 @@ class ScenariosMatcher:
         yield
         if self.config.fail_under and exitstatus != ExitCode.NO_TESTS_COLLECTED:
             terminal = session.config.pluginmanager.get_plugin("terminalreporter")
-            terminal.write_line(f"Spec coverage greater than target {self.config.fail_under}. 🎉🎉🎉")
+            terminal.write_line(f"Spec coverage is greater than target {self.config.fail_under}! 🎉🎉🎉")
