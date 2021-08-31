@@ -19,7 +19,7 @@ from _pytest.config import Config
 from _pytest.config.argparsing import Parser
 from _pytest.config.exceptions import UsageError
 from allure_pytest.listener import AllureListener
-from pluggy.manager import PluginManager
+from pluggy import PluginManager
 
 from .config_provider import ConfigProvider
 from .matcher import ScenariosMatcher

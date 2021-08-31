@@ -111,7 +111,7 @@ class SphinxCollector(Collector):
 
     @staticmethod
     def _get_title_from_rst(file_path):
-        with open(file_path, "r") as file:
+        with open(file_path, "r", encoding="utf-8") as file:
             rst_lines = []
             line = file.readline()
             while line and line != "\n":
