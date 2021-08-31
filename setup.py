@@ -19,10 +19,10 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
-    version="0.0.1",
+    version="0.0.2",
     # the following makes a plugin available to pytest
     entry_points={"pytest11": ["pytest_allure_spec_coverage = pytest_allure_spec_coverage.plugin"]},
     # custom PyPI classifier for pytest plugins
-    install_requires=["pytest", "allure-pytest", "toml", "docutils"],
+    install_requires=["pytest", "allure-pytest", "toml", "docutils", "pluggy"],
     classifiers=["Framework :: Pytest"],
 )
