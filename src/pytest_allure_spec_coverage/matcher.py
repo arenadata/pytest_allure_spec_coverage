@@ -29,6 +29,7 @@ from typing import (
 )
 
 import pytest
+from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.nodes import Item
 from _pytest.terminal import TerminalReporter
@@ -191,6 +192,11 @@ class ScenariosMatcher:
             if not pytest_items.selected and pytest_items.deselected
         )
 
+    @property
+    def spec_coverage_percent(self):
+        """Coverage percent"""
+        return int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
+
     def match(self, items: List[pytest.Item], deselected=False) -> None:
         """Match collected tests items with its scenarios"""
 
@@ -318,12 +324,32 @@ class ScenariosMatcher:
         """Collect deselected tests cases"""
         self.match(items, deselected=True)
 
+    @pytest.hookimpl(hookwrapper=True, trylast=True)
+    def pytest_collection_finish(self):
+        """
+        This hook exit pytest if need to check coverage percent
+        Important that fail will be after terminal reporting hooks
+        """
+        yield
+        if self.config.fail_under and self.spec_coverage_percent < self.config.fail_under:
+            pytest.exit(
+                f"Spec coverage percent is {self.spec_coverage_percent}%, "
+                f"and it is less than target {self.config.fail_under}%",
+                returncode=ExitCode.NO_TESTS_COLLECTED,
+            )
+
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
         """
         Add specification coverage percent to summary stats line
         """
-        spec_coverage_percent = int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
-
         terminalreporter.build_summary_stats_line = _build_summary_stats_line(
-            terminalreporter.build_summary_stats_line, spec_coverage_percent
+            terminalreporter.build_summary_stats_line, self.spec_coverage_percent
         )
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_sessionfinish(self, session, exitstatus):
+        """After terminal summary we print spec coverage success message"""
+        yield
+        if self.config.fail_under and exitstatus != ExitCode.NO_TESTS_COLLECTED:
+            terminal = session.config.pluginmanager.get_plugin("terminalreporter")
+            terminal.write_line(f"Spec coverage is greater than target {self.config.fail_under}%! 🎉🎉🎉")

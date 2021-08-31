@@ -40,8 +40,25 @@ def pytest_addhooks(pluginmanager: PluginManager) -> None:
 
 def pytest_addoption(parser: Parser) -> None:
     """Register plugin options"""
-
-    parser.addoption("--sc-type", action="store", type=str, help="Spec collector type string identifier")
+    group = parser.getgroup("Spec coverage plugin")
+    group.addoption(
+        "--sc-type", "--spec-coverage-type", action="store", type=str, help="Spec collector type string identifier"
+    )
+    group.addoption(
+        "--sc-only",
+        "--spec-coverage-only",
+        action="store_true",
+        help="Calculate spec coverage and exit without test running. "
+        "If the spec coverage percent less than target value, then exit with a status code of 2",
+    )
+    group.addoption(
+        "--sc-target",
+        "--spec-coverage-target",
+        action="store",
+        type=int,
+        default=100,
+        help="The target of spec coverage percent. Used together with --spec-coverage-only",
+    )
     parser.addini(
         "allure_labels", "What labels to use for spec tree. Example: epic, feature, story", type="linelist", default=[]
     )
@@ -88,6 +105,8 @@ def pytest_configure(config: Config) -> None:
 
     if config.option.sc_type not in collectors.keys():
         raise UsageError(f"Unexpected collector type, registered ones: {collectors.keys()}")
+    if config.option.sc_only:
+        config.option.collectonly = True
     cfg_provider = ConfigProvider(pytest_config=config)
     sc_type = collectors[config.option.sc_type]
     matcher = ScenariosMatcher(config=cfg_provider, reporter=listener.allure_logger, collector=sc_type)
