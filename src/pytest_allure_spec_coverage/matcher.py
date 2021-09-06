@@ -33,7 +33,7 @@ from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.nodes import Item
 from _pytest.terminal import TerminalReporter
-from allure_commons.model2 import Label, Link, Status, TestResult, StatusDetails
+from allure_commons.model2 import Label, Link, Status, StatusDetails, TestResult
 from allure_commons.reporter import AllureReporter
 from allure_commons.types import LabelType, LinkType
 from allure_commons.utils import uuid4
@@ -309,7 +309,7 @@ class ScenariosMatcher:
         """Collect implemented test cases after items collection complete"""
 
         self.match(items)
-        self.mark()
+
         try:
             import xdist  # pylint: disable=import-outside-toplevel
         except ImportError:
@@ -317,7 +317,10 @@ class ScenariosMatcher:
         else:
             if xdist.get_xdist_worker_id(session) not in ["master", "gw0"]:
                 return
-        self.report()
+
+        if self.reporter:
+            self.mark()
+            self.report()
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_deselected(self, items: List[pytest.Item]):

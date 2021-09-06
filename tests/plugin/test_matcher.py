@@ -13,20 +13,24 @@
 """Tests of ScenariosMatcher"""
 # pylint: disable=redefined-outer-name
 
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import Collection, List, MutableSequence, Optional, Tuple, Type
+from typing import Collection, Generator, List, MutableSequence, Optional, Tuple, Type
 
 import allure
+import allure_commons
 import pytest
 from _pytest.config import ExitCode
+from _pytest.fixtures import SubRequest
 from _pytest.pytester import Pytester
 
+from pytest_allure_spec_coverage.common import allure_listener
 from pytest_allure_spec_coverage.matcher import ScenariosMatcher, make_allure_labels
 from pytest_allure_spec_coverage.models.collector import Collector
 from pytest_allure_spec_coverage.models.scenario import Parent, Scenario
 
-from .common import run_with_allure
+from .common import run_tests, run_with_allure
 
 
 @pytest.fixture()
@@ -191,6 +195,20 @@ def _has_result(results: MutableSequence[dict], name: str) -> dict:
     return result
 
 
+@contextmanager
+def allure_unloaded(request: SubRequest) -> Generator:  # pylint: disable=inconsistent-return-statements
+    """Unload AllureListener plugin"""
+
+    manager = allure_commons.plugin_manager.get_plugin_manager()
+    listener = allure_listener(request.config)
+    if not listener:
+        return (yield)
+
+    manager.unregister(listener)
+    yield
+    manager.register(listener)
+
+
 @pytest.mark.usefixtures("_conftest", "_pytestini")
 def test_matcher(
     pytester: Pytester,
@@ -241,6 +259,30 @@ def test_matcher(
     with allure.step("Check summary for coverage percent"):
         percent = (len(scenarios) - len(not_implemented)) * 100 // len(scenarios)
         assert f"{percent}%" in pytester_result.outlines[-1]
+
+
+@pytest.mark.usefixtures("_conftest")
+def test_matcher_without_allure(
+    request: SubRequest,
+    pytester: Pytester,
+    test_cases: Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]],
+    scenarios: Collection[Scenario],
+):
+    """Test matcher without allure"""
+
+    *_, not_implemented = test_cases
+    percent = (len(scenarios) - len(not_implemented)) * 100 // len(scenarios)
+    with allure_unloaded(request):
+        pytester_result = run_tests(
+            pytester=pytester,
+            testfile_path="matcher_pytester_test.py",
+            additional_opts=["--sc-type", "test", "--sc-only", "--sc-target", percent],
+            outcomes={"passed": 0},
+        )
+
+    with allure.step("Check summary for coverage percent"):
+        # Last one line will be greetings while previous one with stats
+        assert f"{percent}%" in pytester_result.outlines[-2]
 
 
 @pytest.mark.usefixtures("_conftest")
