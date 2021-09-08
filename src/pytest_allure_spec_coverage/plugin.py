@@ -12,15 +12,15 @@
 
 """Main plugin module"""
 from dataclasses import dataclass
-from typing import MutableMapping, Optional, Type, Iterable
+from typing import Iterable, MutableMapping, Type
 
 import pytest
 from _pytest.config import Config
 from _pytest.config.argparsing import Parser
 from _pytest.config.exceptions import UsageError
-from allure_pytest.listener import AllureListener
 from pluggy import PluginManager
 
+from .common import allure_listener
 from .config_provider import ConfigProvider
 from .matcher import ScenariosMatcher
 from .models.collector import Collector
@@ -87,20 +87,13 @@ class CollectorsPlugin:
 def pytest_configure(config: Config) -> None:
     """Validate preconditions and register required components"""
 
-    listener: Optional[AllureListener] = next(
-        filter(
-            lambda plugin: (isinstance(plugin, AllureListener)),
-            dict(config.pluginmanager.list_name_plugin()).values(),
-        ),
-        None,
-    )
-
+    listener = allure_listener(config)
     collectors: CollectorsMapping = {}
     config.hook.pytest_register_spec_collectors(collectors=collectors)
     config.pluginmanager.register(CollectorsPlugin(collectors=collectors.values()))
     config.addinivalue_line("markers", f"{ScenariosMatcher.MARKER_NAME}(link): test function scenario link")
 
-    if not listener or not config.option.sc_type:
+    if not config.option.sc_type:
         return
 
     if config.option.sc_type not in collectors.keys():
@@ -109,5 +102,6 @@ def pytest_configure(config: Config) -> None:
         config.option.collectonly = True
     cfg_provider = ConfigProvider(pytest_config=config)
     sc_type = collectors[config.option.sc_type]
-    matcher = ScenariosMatcher(config=cfg_provider, reporter=listener.allure_logger, collector=sc_type)
+    reporter = None if not listener else listener.allure_logger
+    matcher = ScenariosMatcher(config=cfg_provider, reporter=reporter, collector=sc_type)
     config.pluginmanager.register(matcher, ScenariosMatcher.PLUGIN_NAME)
