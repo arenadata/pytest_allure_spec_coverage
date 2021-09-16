@@ -14,6 +14,7 @@
 import itertools
 import os
 import shutil
+import sys
 import tempfile
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -45,7 +46,6 @@ from allure_pytest.utils import ALLURE_LABEL_MARK, ALLURE_LINK_MARK
 from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
-import sys
 
 
 def is_xdist():
@@ -323,7 +323,8 @@ class ScenariosMatcher:
             *make_allure_labels(custom_labels, scenario.specifications_names),
         )
 
-    def _write_shared(self, config, name, content):
+    @staticmethod
+    def _write_shared(config, name, content):
         """
         Write shared data by name
         Used when need to share some from xdist workers to xdist master
@@ -332,7 +333,8 @@ class ScenariosMatcher:
         with open(os.path.join(shared_dir, name), "w", encoding="utf-8") as file:
             file.write(str(content))
 
-    def _get_shared(self, config, name):
+    @staticmethod
+    def _get_shared(config, name):
         """
         Get shared data by name
         Used when need to share some from xdist workers to xdist master
@@ -342,17 +344,20 @@ class ScenariosMatcher:
         with open(os.path.join(shared_dir, name), "r", encoding="utf-8") as file:
             return file.read()
 
-    def pytest_configure(self, config):
+    @staticmethod
+    def pytest_configure(config):
         """Create shared directory if xdist used"""
         if is_xdist_master(config):
             config.shared_directory = tempfile.mkdtemp()
 
-    def pytest_unconfigure(self, config):
+    @staticmethod
+    def pytest_unconfigure(config):
         """Remove shared directory if xdist used"""
         if is_xdist_master(config):
             shutil.rmtree(config.shared_directory)
 
-    def pytest_configure_node(self, node):
+    @staticmethod
+    def pytest_configure_node(node):
         """Configure shared directory for xdist workers"""
         node.workerinput["shared_directory"] = node.config.shared_directory
 
