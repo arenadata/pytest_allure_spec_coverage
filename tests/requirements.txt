@@ -1,0 +1,2 @@
+allure-python-commons-test
+pytest-xdist

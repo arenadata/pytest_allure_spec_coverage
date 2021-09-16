@@ -12,30 +12,9 @@
 
 """Common methods for plugin tests"""
 
-from contextlib import contextmanager
-from unittest import mock
-
 import allure
-import allure_commons
 from _pytest.pytester import Pytester, RunResult
-from allure_commons.logger import AllureMemoryLogger
-
-
-@contextmanager
-def fake_logger(mock_path, logger):
-    """Fake Allure logger"""
-
-    blocked_plugins = []
-    for name, plugin in allure_commons.plugin_manager.list_name_plugin():
-        allure_commons.plugin_manager.unregister(plugin=plugin, name=name)
-        blocked_plugins.append(plugin)
-
-    with mock.patch(mock_path) as ReporterMock:  # pylint: disable=invalid-name
-        ReporterMock.return_value = logger
-        yield
-
-    for plugin in blocked_plugins:
-        allure_commons.plugin_manager.register(plugin)
+from allure_commons_test.report import AllureReport
 
 
 def run_tests(
@@ -81,9 +60,9 @@ def run_tests(
 def run_with_allure(*args, **kwargs):
     """Run tests with fake allure logger"""
 
-    allure_report = AllureMemoryLogger()
-    with fake_logger("allure_pytest.plugin.AllureFileLogger", allure_report):
-        addopts = kwargs.get("additional_opts", [])
-        addopts.extend(["--alluredir", "::in-memory::"])
-        kwargs["additional_opts"] = addopts
-        return run_tests(*args, **kwargs), allure_report
+    addopts = kwargs.get("additional_opts", [])
+    addopts.extend(["--alluredir", "allure-results"])
+    kwargs["additional_opts"] = addopts
+    result = run_tests(*args, **kwargs)
+    allure_report = AllureReport("allure-results")
+    return result, allure_report

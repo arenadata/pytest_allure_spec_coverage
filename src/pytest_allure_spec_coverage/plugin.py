@@ -25,6 +25,7 @@ from .config_provider import ConfigProvider
 from .matcher import ScenariosMatcher
 from .models.collector import Collector
 from .spec_collectors.sphinx import SphinxCollector
+from .xdist_shared import XdistSharedStorage
 
 CollectorsMapping = MutableMapping[str, Type[Collector]]
 
@@ -92,6 +93,11 @@ def pytest_configure(config: Config) -> None:
     config.hook.pytest_register_spec_collectors(collectors=collectors)
     config.pluginmanager.register(CollectorsPlugin(collectors=collectors.values()))
     config.addinivalue_line("markers", f"{ScenariosMatcher.MARKER_NAME}(link): test function scenario link")
+    if config.pluginmanager.hasplugin("xdist"):
+        storage = XdistSharedStorage()
+        config.pluginmanager.register(storage)
+    else:
+        storage = None
 
     if not config.option.sc_type:
         return
@@ -103,5 +109,5 @@ def pytest_configure(config: Config) -> None:
     cfg_provider = ConfigProvider(pytest_config=config)
     sc_type = collectors[config.option.sc_type]
     reporter = None if not listener else listener.allure_logger
-    matcher = ScenariosMatcher(config=cfg_provider, reporter=reporter, collector=sc_type)
+    matcher = ScenariosMatcher(config=cfg_provider, reporter=reporter, collector=sc_type, storage=storage)
     config.pluginmanager.register(matcher, ScenariosMatcher.PLUGIN_NAME)

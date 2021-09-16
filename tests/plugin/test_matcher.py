@@ -16,7 +16,7 @@
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from textwrap import dedent
-from typing import Collection, Generator, List, MutableSequence, Optional, Tuple, Type
+from typing import Collection, Generator, List, MutableSequence, Optional, Tuple
 
 import allure
 import allure_commons
@@ -27,55 +27,9 @@ from _pytest.pytester import Pytester
 
 from pytest_allure_spec_coverage.common import allure_listener
 from pytest_allure_spec_coverage.matcher import ScenariosMatcher, make_allure_labels
-from pytest_allure_spec_coverage.models.collector import Collector
-from pytest_allure_spec_coverage.models.scenario import Parent, Scenario
-
+from pytest_allure_spec_coverage.models.scenario import Scenario
+from ..examples.collector import scenarios
 from .common import run_tests, run_with_allure
-
-
-@pytest.fixture()
-def scenarios() -> List[Scenario]:
-    """List of fake scenarios assumed as returned by Collector instance"""
-
-    return [
-        Scenario(
-            id="simple_scenario",
-            name="simple_scenario",
-            display_name="Simple scenario",
-            parents=[
-                Parent(name="scenarios", display_name="There is some scenarios"),
-            ],
-            link="link://simple_scenario",
-        ),
-        Scenario(
-            id="nested/scenario",
-            name="nested_scenario",
-            display_name="Nested scenario",
-            parents=[
-                Parent(name="scenarios", display_name="There is some scenarios"),
-                Parent(name="nested", display_name="Nested"),
-            ],
-            link="link://nested_scenario",
-        ),
-        Scenario(
-            id="deselected_scenario",
-            name="deselected_scenario",
-            display_name="Deselected scenario",
-            parents=[
-                Parent(name="scenarios", display_name="There is some scenarios"),
-            ],
-            link="link://deselected_scenario",
-        ),
-        Scenario(
-            id="should_not_be_used",
-            name="should_not_be_used",
-            display_name="Should not be used",
-            parents=[
-                Parent(name="scenarios", display_name="There is some scenarios"),
-            ],
-            link="link://should_not_be_used",
-        ),
-    ]
 
 
 @dataclass
@@ -87,8 +41,7 @@ class TestCase:
     status: str = "unknown"
 
 
-@pytest.fixture()
-def test_cases(scenarios: List[Scenario]) -> Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]]:
+def test_cases() -> Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]]:
     """Will return test cases collection alongside not implemented scenarios"""
 
     simple_scenario, nested_scenario, deselected_scenario, *not_implemented = scenarios
@@ -111,35 +64,15 @@ def test_cases(scenarios: List[Scenario]) -> Tuple[Collection[TestCase], Collect
 
 
 @pytest.fixture()
-def collector_mock(scenarios: List[Scenario]) -> Type[Collector]:
-    """Return Collector mock class"""
-
-    class CollectorMock(Collector):
-        """Collector mock class"""
-
-        def collect(self):
-            return scenarios
-
-        def setup_config(self):
-            """Does not required"""
-
-        @staticmethod
-        def addoption(parser):
-            """Does not required"""
-
-    return CollectorMock
-
-
-@pytest.fixture()
-def _conftest(pytester: Pytester, collector_mock: Type[Collector]) -> None:
-    pytest.CollectorMock = collector_mock
+def _conftest(pytester: Pytester) -> None:
+    pytester.copy_example("collector.py")
     conftest = """
     '''Register Collector mock'''
-    import pytest
+    from collector import CollectorMock
 
 
     def pytest_register_spec_collectors(collectors) -> None:
-        collectors["test"] = pytest.CollectorMock
+        collectors["test"] = CollectorMock
     """
     pytester.makeconftest(dedent(conftest))
 
@@ -210,19 +143,22 @@ def allure_unloaded(request: SubRequest) -> Generator:  # pylint: disable=incons
 
 
 @pytest.mark.usefixtures("_conftest", "_pytestini")
+@pytest.mark.parametrize("xdist", [True, False], ids=["xdist", "in_series"])
 def test_matcher(
+    xdist: bool,
     pytester: Pytester,
-    test_cases: Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]],
-    scenarios: Collection[Scenario],
     custom_labels: Collection[str],
 ):
     """Test matcher"""
 
-    cases, deselected, not_implemented = test_cases
+    cases, deselected, not_implemented = test_cases()
+    opts = ["--sc-type", "test", "-k", "not deselected"]
+    if xdist:
+        opts.extend(["-n", "2"])
     pytester_result, allure_results = run_with_allure(
         pytester=pytester,
         testfile_path="matcher_pytester_test.py",
-        additional_opts=["--sc-type", "test", "-k", "not deselected"],
+        additional_opts=opts,
         outcomes=dict(passed=len(cases)),
     )
 
@@ -242,7 +178,7 @@ def test_matcher(
             for match in item.matches:
                 _has_link(result, match.link)
                 _has_labels(result, custom_labels, match.specifications_names)
-            if not item.matches:  # check that lables does not applied by mistake
+            if not item.matches:  # check that labels does not applied by mistake
                 _has_no_labels(result, custom_labels)
 
     with allure.step("Check fake test cases"):
@@ -265,12 +201,10 @@ def test_matcher(
 def test_matcher_without_allure(
     request: SubRequest,
     pytester: Pytester,
-    test_cases: Tuple[Collection[TestCase], Collection[Scenario], Collection[Scenario]],
-    scenarios: Collection[Scenario],
 ):
     """Test matcher without allure"""
 
-    *_, not_implemented = test_cases
+    *_, not_implemented = test_cases()
     percent = (len(scenarios) - len(not_implemented)) * 100 // len(scenarios)
     with allure_unloaded(request):
         pytester_result = run_tests(

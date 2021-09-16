@@ -12,6 +12,7 @@
 
 """Matcher of tests cases and scenarios"""
 import itertools
+import os
 from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import (
@@ -42,6 +43,17 @@ from allure_pytest.utils import ALLURE_LABEL_MARK, ALLURE_LINK_MARK
 from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
+from .xdist_shared import XdistSharedStorage
+
+
+def is_xdist_first_worker():
+    """True if running on first xdist worker"""
+    return os.getenv("PYTEST_XDIST_WORKER") == "gw0"
+
+
+def is_xdist_root():
+    """True if xdist master or xdist not used"""
+    return os.getenv("PYTEST_XDIST_WORKER", "root") == "root"
 
 
 def scenario_ids(item: Item) -> Iterable[str]:
@@ -168,6 +180,7 @@ class ScenariosMatcher:
     config: ConfigProvider
     collector: Type[Collector]
     reporter: AllureReporter
+    storage: Optional[XdistSharedStorage]
 
     scenarios: Collection[Scenario] = field(default_factory=list)
     matches: Mapping[Scenario, PytestItems] = field(default_factory=dict)
@@ -307,20 +320,16 @@ class ScenariosMatcher:
     @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self, session: Session, items: List[pytest.Item]) -> None:
         """Collect implemented test cases after items collection complete"""
-
         self.match(items)
+        if not self.reporter:
+            return
 
-        try:
-            import xdist  # pylint: disable=import-outside-toplevel
-        except ImportError:
-            pass
-        else:
-            if xdist.get_xdist_worker_id(session) not in ["master", "gw0"]:
-                return
-
-        if self.reporter:
-            self.mark()
-            self.report()
+        self.mark()
+        if self.storage and not is_xdist_first_worker() and not is_xdist_root():
+            return
+        self.report()
+        if self.storage and is_xdist_first_worker():
+            self.storage.write(session.config, "spec_coverage_percent", self.spec_coverage_percent)
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_deselected(self, items: List[pytest.Item]):
@@ -345,8 +354,14 @@ class ScenariosMatcher:
         """
         Add specification coverage percent to summary stats line
         """
+        if not is_xdist_root():
+            return
+        if self.storage and self.storage.is_xdist_master(terminalreporter.config):
+            percent = int(self.storage.get(terminalreporter.config, "spec_coverage_percent"))
+        else:
+            percent = self.spec_coverage_percent
         terminalreporter.build_summary_stats_line = _build_summary_stats_line(
-            terminalreporter.build_summary_stats_line, self.spec_coverage_percent
+            terminalreporter.build_summary_stats_line, percent
         )
 
     @pytest.hookimpl(hookwrapper=True)

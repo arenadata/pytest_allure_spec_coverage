@@ -32,5 +32,5 @@ line_length = 120
 
 [tool.pytest.ini_options]
 testpaths = ["tests/plugin"]
-pytester_example_dir = "tests/_data"
+pytester_example_dir = "tests/examples"
 filterwarnings = ["ignore:cannot collect test class:"]

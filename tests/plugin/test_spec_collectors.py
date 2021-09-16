@@ -22,7 +22,7 @@ from pytest_allure_spec_coverage.models.scenario import Parent, Scenario
 from pytest_allure_spec_coverage.spec_collectors import SphinxCollector
 
 CURR_DIR = Path(__file__).parent
-SPEC_DIR = str(CURR_DIR / ".." / "_data" / "sphinx_spec" / "scenarios")
+SPEC_DIR = str(CURR_DIR / ".." / "examples" / "sphinx_spec" / "scenarios")
 
 SCENARIOS = [
     Scenario(
