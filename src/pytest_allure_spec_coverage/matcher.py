@@ -13,9 +13,6 @@
 """Matcher of tests cases and scenarios"""
 import itertools
 import os
-import shutil
-import sys
-import tempfile
 from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import (
@@ -46,21 +43,12 @@ from allure_pytest.utils import ALLURE_LABEL_MARK, ALLURE_LINK_MARK
 from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
-
-
-def is_xdist():
-    """True if xdist installed"""
-    return "xdist" in sys.modules
+from .xdist_shared import XdistSharedStorage
 
 
 def is_xdist_first_worker():
     """True if running on first xdist worker"""
     return os.getenv("PYTEST_XDIST_WORKER") == "gw0"
-
-
-def is_xdist_master(config):
-    """True if running on xdist master"""
-    return not hasattr(config, "workerinput") and config.option.dist != "no"
 
 
 def is_xdist_root():
@@ -192,6 +180,7 @@ class ScenariosMatcher:
     config: ConfigProvider
     collector: Type[Collector]
     reporter: AllureReporter
+    storage: Optional[XdistSharedStorage]
 
     scenarios: Collection[Scenario] = field(default_factory=list)
     matches: Mapping[Scenario, PytestItems] = field(default_factory=dict)
@@ -323,44 +312,6 @@ class ScenariosMatcher:
             *make_allure_labels(custom_labels, scenario.specifications_names),
         )
 
-    @staticmethod
-    def _write_shared(config, name, content):
-        """
-        Write shared data by name
-        Used when need to share some from xdist workers to xdist master
-        """
-        shared_dir = config.workerinput["shared_directory"]
-        with open(os.path.join(shared_dir, name), "w", encoding="utf-8") as file:
-            file.write(str(content))
-
-    @staticmethod
-    def _get_shared(config, name):
-        """
-        Get shared data by name
-        Used when need to share some from xdist workers to xdist master
-
-        """
-        shared_dir = config.shared_directory
-        with open(os.path.join(shared_dir, name), "r", encoding="utf-8") as file:
-            return file.read()
-
-    @staticmethod
-    def pytest_configure(config):
-        """Create shared directory if xdist used"""
-        if is_xdist_master(config):
-            config.shared_directory = tempfile.mkdtemp()
-
-    @staticmethod
-    def pytest_unconfigure(config):
-        """Remove shared directory if xdist used"""
-        if is_xdist_master(config):
-            shutil.rmtree(config.shared_directory)
-
-    @staticmethod
-    def pytest_configure_node(node):
-        """Configure shared directory for xdist workers"""
-        node.workerinput["shared_directory"] = node.config.shared_directory
-
     def pytest_sessionstart(self):
         """Collect scenarios on session start"""
 
@@ -374,11 +325,11 @@ class ScenariosMatcher:
             return
 
         self.mark()
-        if is_xdist() and not is_xdist_first_worker() and not is_xdist_root():
+        if self.storage and not is_xdist_first_worker() and not is_xdist_root():
             return
         self.report()
-        if is_xdist_first_worker():
-            self._write_shared(session.config, "spec_coverage_percent", self.spec_coverage_percent)
+        if self.storage and is_xdist_first_worker():
+            self.storage.write(session.config, "spec_coverage_percent", self.spec_coverage_percent)
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_deselected(self, items: List[pytest.Item]):
@@ -405,8 +356,8 @@ class ScenariosMatcher:
         """
         if not is_xdist_root():
             return
-        if is_xdist_master(terminalreporter.config):
-            percent = int(self._get_shared(terminalreporter.config, "spec_coverage_percent"))
+        if self.storage and self.storage.is_xdist_master(terminalreporter.config):
+            percent = int(self.storage.get(terminalreporter.config, "spec_coverage_percent"))
         else:
             percent = self.spec_coverage_percent
         terminalreporter.build_summary_stats_line = _build_summary_stats_line(
