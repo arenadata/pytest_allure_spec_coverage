@@ -45,16 +45,12 @@ from allure_pytest.utils import ALLURE_LABEL_MARK, ALLURE_LINK_MARK
 from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
+import sys
 
 
 def is_xdist():
     """True if xdist installed"""
-    try:
-        import xdist  # pylint: disable=import-outside-toplevel,unused-import
-    except ImportError:
-        return False
-    else:
-        return True
+    return "xdist" in sys.modules
 
 
 def is_xdist_first_worker():
