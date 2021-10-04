@@ -143,9 +143,9 @@ def test_sphinx_collector_with_endpoint_and_branch(sphinx_collector, monkeypatch
         assert scenario.link, "Scenario link should exists"
         assert scenario.link == f"https://spec.url/{scenario.parents[0].name}/{scenario.id}.html"
 
-    monkeypatch.setenv("BRANCH_NAME", "feature")
+    monkeypatch.setenv("BRANCH_NAME", "feature/ISSUE-123")
     scenarios = sphinx_collector.collect()
     for scenario in scenarios:
         assert scenario.link, "Scenario link should exists"
         parents = "/".join([parent.name for parent in scenario.parents])
-        assert scenario.link == f"https://spec.url/feature/{parents}/{scenario.name}.html"
+        assert scenario.link == f"https://spec.url/feature_ISSUE-123/{parents}/{scenario.name}.html"
