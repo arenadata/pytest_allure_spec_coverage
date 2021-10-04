@@ -105,6 +105,7 @@ class SphinxCollector(Collector):
             return None
         url = self.spec_endpoint
         if branch and branch != self.default_branch:
+            branch = branch.replace("/", "_")
             url += f"/{branch}"
         url += f"/{parent_name.replace('.', '/')}"
         return f"{url}/{name}.html"
