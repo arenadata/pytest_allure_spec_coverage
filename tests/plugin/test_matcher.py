@@ -28,8 +28,8 @@ from _pytest.pytester import Pytester
 from pytest_allure_spec_coverage.common import allure_listener
 from pytest_allure_spec_coverage.matcher import ScenariosMatcher, make_allure_labels
 from pytest_allure_spec_coverage.models.scenario import Scenario
-from ..examples.collector import scenarios
 from .common import run_tests, run_with_allure
+from ..examples.collector import scenarios
 
 
 @dataclass
@@ -217,6 +217,11 @@ def test_matcher_without_allure(
     with allure.step("Check summary for coverage percent"):
         # Last one line will be greetings while previous one with stats
         assert f"{percent}%" in pytester_result.outlines[-2]
+    with allure.step("Check tests without spec"):
+        assert (
+            "There are tests without spec: test_abandoned_case, test_non_existent_scenario_case, "
+            "test_one_parameter_marked_only[1]"
+        ) in pytester_result.outlines
 
 
 @pytest.mark.usefixtures("_conftest")

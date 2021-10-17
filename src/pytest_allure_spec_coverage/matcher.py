@@ -183,6 +183,7 @@ class ScenariosMatcher:
     storage: Optional[XdistSharedStorage]
 
     scenarios: Collection[Scenario] = field(default_factory=list)
+    nonexistent: [PytestItems] = field(default_factory=list)
     matches: Mapping[Scenario, PytestItems] = field(default_factory=dict)
 
     @property
@@ -210,19 +211,23 @@ class ScenariosMatcher:
         """Coverage percent"""
         return int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
 
-    def match(self, items: List[pytest.Item], deselected=False) -> None:
+    def match(self, items: List[pytest.Item], deselected: bool = False) -> None:
         """Match collected tests items with its scenarios"""
 
         if not self.matches:
             self.matches = {sc: PytestItems() for sc in self.scenarios}
         sc_lookup = {sc.id: sc for sc in self.scenarios}
         for item in items:
-            for key in scenario_ids(item):
-                with suppress(KeyError):
-                    if deselected:
-                        self.matches[sc_lookup[key]].deselected.append(item)
-                    else:
-                        self.matches[sc_lookup[key]].selected.append(item)
+            test_ids = list(scenario_ids(item))
+            if not test_ids or any(test_id for test_id in test_ids if test_id not in sc_lookup):
+                self.nonexistent.append(item)
+            else:
+                for key in scenario_ids(item):
+                    with suppress(KeyError):
+                        if deselected:
+                            self.matches[sc_lookup[key]].deselected.append(item)
+                        else:
+                            self.matches[sc_lookup[key]].selected.append(item)
 
     def mark(self) -> None:
         """Add markers with links to spec for matched items"""
@@ -368,6 +373,9 @@ class ScenariosMatcher:
     def pytest_sessionfinish(self, session, exitstatus):
         """After terminal summary we print spec coverage success message"""
         yield
-        if self.config.fail_under and exitstatus != ExitCode.NO_TESTS_COLLECTED:
+        if (self.config.fail_under and exitstatus != ExitCode.NO_TESTS_COLLECTED) or self.nonexistent:
             terminal = session.config.pluginmanager.get_plugin("terminalreporter")
             terminal.write_line(f"Spec coverage is greater than target {self.config.fail_under}%! 🎉🎉🎉")
+            if self.nonexistent:
+                tests_without_spec = ", ".join([item.name for item in self.nonexistent])
+                terminal.write_line(f"There are tests without spec: {tests_without_spec}")
