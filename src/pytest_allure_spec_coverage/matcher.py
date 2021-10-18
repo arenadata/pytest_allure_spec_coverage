@@ -13,7 +13,6 @@
 """Matcher of tests cases and scenarios"""
 import itertools
 import os
-from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import (
     Callable,
