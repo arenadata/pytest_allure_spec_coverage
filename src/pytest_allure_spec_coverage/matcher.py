@@ -218,16 +218,14 @@ class ScenariosMatcher:
             self.matches = {sc: PytestItems() for sc in self.scenarios}
         sc_lookup = {sc.id: sc for sc in self.scenarios}
         for item in items:
-            test_ids = list(scenario_ids(item))
-            if not test_ids or any(test_id for test_id in test_ids if test_id not in sc_lookup):
-                self.nonexistent.append(item)
-            else:
-                for key in scenario_ids(item):
-                    with suppress(KeyError):
-                        if deselected:
-                            self.matches[sc_lookup[key]].deselected.append(item)
-                        else:
-                            self.matches[sc_lookup[key]].selected.append(item)
+            for key in scenario_ids(item):
+                if key not in sc_lookup:
+                    self.nonexistent.append(item)
+                else:
+                    if deselected:
+                        self.matches[sc_lookup[key]].deselected.append(item)
+                    else:
+                        self.matches[sc_lookup[key]].selected.append(item)
 
     def mark(self) -> None:
         """Add markers with links to spec for matched items"""

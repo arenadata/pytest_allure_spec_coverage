@@ -223,9 +223,8 @@ def test_matcher_without_allure(
         ), f'Should be "{percent}%" in outlines'
     with allure.step("Check tests without spec"):
         assert (
-            "There are tests without spec: test_abandoned_case, test_non_existent_scenario_case, "
-            "test_one_parameter_marked_only[1]"
-        ) in pytester_result.outlines, "Should be message about tests without specs"
+            "There are tests without spec: test_non_existent_scenario_case" in pytester_result.outlines
+        ), "Should be message about tests without specs"
 
 
 @pytest.mark.usefixtures("_conftest")
