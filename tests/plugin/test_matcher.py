@@ -194,7 +194,9 @@ def test_matcher(
 
     with allure.step("Check summary for coverage percent"):
         percent = (len(scenarios) - len(not_implemented)) * 100 // len(scenarios)
-        assert f"{percent}%" in pytester_result.outlines[-1]
+        assert any(
+            f"{percent}%" in outline for outline in pytester_result.outlines
+        ), f'Should be "{percent}%" in outlines'
 
 
 @pytest.mark.usefixtures("_conftest")
