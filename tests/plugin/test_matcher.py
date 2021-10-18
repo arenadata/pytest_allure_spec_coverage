@@ -216,8 +216,9 @@ def test_matcher_without_allure(
 
     with allure.step("Check summary for coverage percent"):
         # Last one line will be greetings while previous one with stats
-        assert any(f"{percent}%" in outline for outline in pytester_result.outlines), \
-            f'Should be "{percent}%" in outlines'
+        assert any(
+            f"{percent}%" in outline for outline in pytester_result.outlines
+        ), f'Should be "{percent}%" in outlines'
     with allure.step("Check tests without spec"):
         assert (
             "There are tests without spec: test_abandoned_case, test_non_existent_scenario_case, "
@@ -237,10 +238,12 @@ def test_sc_only(pytester: Pytester):
             outcomes={"passed": 0},
         )
         assert pytester_result.ret == ExitCode.NO_TESTS_COLLECTED
-        assert any("_pytest.outcomes.Exit" in outline for outline in pytester_result.outlines), \
-            'Should be "_pytest.outcomes.Exit" in outlines'
-        assert any("50% specification coverage" in outline for outline in pytester_result.outlines),\
-            'Should be "50% specification coverage" in outlines'
+        assert any(
+            "_pytest.outcomes.Exit" in outline for outline in pytester_result.outlines
+        ), 'Should be "_pytest.outcomes.Exit" in outlines'
+        assert any(
+            "50% specification coverage" in outline for outline in pytester_result.outlines
+        ), 'Should be "50% specification coverage" in outlines'
     with allure.step("Assert that --sc-target less than coverage"):
         pytester_result, _ = run_with_allure(
             pytester=pytester,
