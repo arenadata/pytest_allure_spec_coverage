@@ -12,6 +12,7 @@
 
 """Matcher of tests cases and scenarios"""
 import itertools
+import json
 import os
 from dataclasses import dataclass, field
 from typing import (
@@ -375,4 +376,4 @@ class ScenariosMatcher:
             terminal.write_line(f"Spec coverage is greater than target {self.config.fail_under}%! 🎉🎉🎉")
             if self.nonexistent:
                 tests_without_spec = ", ".join([item.name for item in self.nonexistent])
-                terminal.write_line(f"There are tests without spec: {tests_without_spec}")
+                terminal.write_line(f"There are tests without spec: {json.dumps(tests_without_spec, indent=2)}")
