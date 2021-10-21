@@ -31,11 +31,6 @@ def test_multiple_scenarios_case():
     """Case with multiple implemented scenarios"""
 
 
-@pytest.mark.scenario("non_existent")
-def test_non_existent_scenario_case():
-    """Case implemented non-existent scenario"""
-
-
 @pytest.mark.scenario("simple_scenario")
 @pytest.mark.scenario("simple_scenario")
 def test_duplicated_scenarios_case():

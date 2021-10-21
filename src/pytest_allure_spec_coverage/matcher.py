@@ -13,6 +13,7 @@
 """Matcher of tests cases and scenarios"""
 import itertools
 import os
+import warnings
 from dataclasses import dataclass, field
 from typing import (
     Callable,
@@ -27,7 +28,6 @@ from typing import (
     Tuple,
     Type,
 )
-import json
 import pytest
 from _pytest.config import ExitCode
 from _pytest.main import Session
@@ -43,6 +43,10 @@ from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
 from .xdist_shared import XdistSharedStorage
+
+
+class SpecCollectorWarning(UserWarning):
+    """Warn for spec collector issues"""
 
 
 def is_xdist_first_worker():
@@ -345,12 +349,25 @@ class ScenariosMatcher:
         Important that fail will be after terminal reporting hooks
         """
         yield
-        if self.config.fail_under and self.spec_coverage_percent < self.config.fail_under:
-            pytest.exit(
-                f"Spec coverage percent is {self.spec_coverage_percent}%, "
-                f"and it is less than target {self.config.fail_under}%",
-                returncode=ExitCode.NO_TESTS_COLLECTED,
-            )
+        warn_message = ""
+        if self.nonexistent:
+            tests_without_spec = "\n    ".join(item.name for item in self.nonexistent)
+            warn_message = f"The following tests linked with nonexistent spec:\n    {tests_without_spec}"
+        if not self.config.fail_under:
+            if warn_message:
+                warnings.warn(SpecCollectorWarning(warn_message))
+        else:
+            exit_message = ""
+            if self.spec_coverage_percent < self.config.fail_under:
+                exit_message += (
+                    f"Spec coverage percent is {self.spec_coverage_percent}%, "
+                    f"and it is less than target {self.config.fail_under}%\n"
+                )
+            if exit_message or warn_message:
+                pytest.exit(
+                    exit_message + warn_message,
+                    returncode=ExitCode.NO_TESTS_COLLECTED,
+                )
 
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
         """
@@ -370,9 +387,6 @@ class ScenariosMatcher:
     def pytest_sessionfinish(self, session, exitstatus):
         """After terminal summary we print spec coverage success message"""
         yield
-        if (self.config.fail_under and exitstatus != ExitCode.NO_TESTS_COLLECTED) or self.nonexistent:
+        if self.config.fail_under and exitstatus != ExitCode.NO_TESTS_COLLECTED:
             terminal = session.config.pluginmanager.get_plugin("terminalreporter")
             terminal.write_line(f"Spec coverage is greater than target {self.config.fail_under}%! 🎉🎉🎉")
-            if self.nonexistent:
-                tests_without_spec = [item.name for item in self.nonexistent]
-                terminal.write_line(f"There are tests without spec: {json.dumps(tests_without_spec, indent=2)}")

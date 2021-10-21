@@ -49,7 +49,6 @@ def test_cases() -> Tuple[Collection[TestCase], Collection[Scenario], Collection
     return (
         (
             TestCase("test_abandoned_case"),
-            TestCase("test_non_existent_scenario_case"),
             TestCase("test_single_scenario_case", matches=[simple_scenario]),
             TestCase("test_multiple_scenarios_case", matches=[simple_scenario, nested_scenario]),
             TestCase("test_duplicated_scenarios_case", matches=[simple_scenario, simple_scenario]),
@@ -221,13 +220,6 @@ def test_matcher_without_allure(
         assert any(
             f"{percent}%" in outline for outline in pytester_result.outlines
         ), f'Should be "{percent}%" in outlines'
-    with allure.step("Check tests without spec"):
-        assert (
-            "There are tests without spec: [" in pytester_result.outlines
-        ), "Should be message about tests without specs"
-        assert (
-            '  "test_non_existent_scenario_case"' in pytester_result.outlines
-        ), "Should be message with test without specs"
 
 
 @pytest.mark.usefixtures("_conftest")
@@ -256,3 +248,29 @@ def test_sc_only(pytester: Pytester):
             outcomes={"passed": 0},
         )
         assert any("🎉🎉🎉" in outline for outline in pytester_result.outlines), 'Should be "🎉🎉🎉" in outlines'
+
+
+@pytest.mark.usefixtures("_conftest")
+def test_non_existent(pytester: Pytester):
+    """Test that nonexistent spec warns or raise error"""
+    with allure.step("Assert that non_existent test has warning"):
+        pytester_result, _ = run_with_allure(
+            pytester=pytester,
+            testfile_path="non_existent_test.py",
+            additional_opts=["--sc-type", "test"],
+            outcomes={"passed": 2},
+        )
+        assert pytester_result.ret == ExitCode.OK
+        assert "      test_non_existent_scenario_case" in pytester_result.outlines
+        assert any("2 passed, 1 warning, 25% specification coverage" in outline for outline in pytester_result.outlines)
+    with allure.step("Assert that non_existent test raise error in sc_only mode"):
+        pytester_result, _ = run_with_allure(
+            pytester=pytester,
+            testfile_path="non_existent_test.py",
+            additional_opts=["--sc-type", "test", "--sc-only", "--sc-target", "25"],
+            outcomes={"passed": 0},
+        )
+        assert pytester_result.ret == ExitCode.NO_TESTS_COLLECTED
+        assert any(
+            "The following tests linked with nonexistent spec" in outline for outline in pytester_result.outlines
+        )
