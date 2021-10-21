@@ -227,6 +227,7 @@ def test_matcher_without_allure(
         assert ('  "test_non_existent_scenario_case"' in pytester_result.outlines), \
             "Should be message with test without specs"
 
+
 @pytest.mark.usefixtures("_conftest")
 def test_sc_only(pytester: Pytester):
     """Test --sc-only and --sc-target options"""
