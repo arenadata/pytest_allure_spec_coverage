@@ -5,7 +5,7 @@ import tempfile
 
 
 class XdistSharedStorage:
-    """Xdist shared storage implementation """
+    """Xdist shared storage implementation"""
 
     @staticmethod
     def is_xdist_master(config):

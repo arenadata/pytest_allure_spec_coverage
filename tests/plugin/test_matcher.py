@@ -28,8 +28,8 @@ from _pytest.pytester import Pytester
 from pytest_allure_spec_coverage.common import allure_listener
 from pytest_allure_spec_coverage.matcher import ScenariosMatcher, make_allure_labels
 from pytest_allure_spec_coverage.models.scenario import Scenario
-from ..examples.collector import scenarios
 from .common import run_tests, run_with_allure
+from ..examples.collector import scenarios
 
 
 @dataclass
@@ -49,7 +49,6 @@ def test_cases() -> Tuple[Collection[TestCase], Collection[Scenario], Collection
     return (
         (
             TestCase("test_abandoned_case"),
-            TestCase("test_non_existent_scenario_case"),
             TestCase("test_single_scenario_case", matches=[simple_scenario]),
             TestCase("test_multiple_scenarios_case", matches=[simple_scenario, nested_scenario]),
             TestCase("test_duplicated_scenarios_case", matches=[simple_scenario, simple_scenario]),
@@ -194,7 +193,9 @@ def test_matcher(
 
     with allure.step("Check summary for coverage percent"):
         percent = (len(scenarios) - len(not_implemented)) * 100 // len(scenarios)
-        assert f"{percent}%" in pytester_result.outlines[-1]
+        assert any(
+            f"{percent}%" in outline for outline in pytester_result.outlines
+        ), f'Should be "{percent}%" in outlines'
 
 
 @pytest.mark.usefixtures("_conftest")
@@ -216,7 +217,9 @@ def test_matcher_without_allure(
 
     with allure.step("Check summary for coverage percent"):
         # Last one line will be greetings while previous one with stats
-        assert f"{percent}%" in pytester_result.outlines[-2]
+        assert any(
+            f"{percent}%" in outline for outline in pytester_result.outlines
+        ), f'Should be "{percent}%" in outlines'
 
 
 @pytest.mark.usefixtures("_conftest")
@@ -231,8 +234,12 @@ def test_sc_only(pytester: Pytester):
             outcomes={"passed": 0},
         )
         assert pytester_result.ret == ExitCode.NO_TESTS_COLLECTED
-        assert "_pytest.outcomes.Exit" in pytester_result.outlines[-1]
-        assert "50% specification coverage" in pytester_result.outlines[-2]
+        assert any(
+            "_pytest.outcomes.Exit" in outline for outline in pytester_result.outlines
+        ), 'Should be "_pytest.outcomes.Exit" in outlines'
+        assert any(
+            "50% specification coverage" in outline for outline in pytester_result.outlines
+        ), 'Should be "50% specification coverage" in outlines'
     with allure.step("Assert that --sc-target less than coverage"):
         pytester_result, _ = run_with_allure(
             pytester=pytester,
@@ -240,4 +247,30 @@ def test_sc_only(pytester: Pytester):
             additional_opts=["--sc-type", "test", "--sc-only", "--sc-target", "25"],
             outcomes={"passed": 0},
         )
-        assert "🎉🎉🎉" in pytester_result.outlines[-1]
+        assert any("🎉🎉🎉" in outline for outline in pytester_result.outlines), 'Should be "🎉🎉🎉" in outlines'
+
+
+@pytest.mark.usefixtures("_conftest")
+def test_non_existent(pytester: Pytester):
+    """Test that nonexistent spec warns or raise error"""
+    with allure.step("Assert that non_existent test has warning"):
+        pytester_result, _ = run_with_allure(
+            pytester=pytester,
+            testfile_path="non_existent_test.py",
+            additional_opts=["--sc-type", "test"],
+            outcomes={"passed": 2},
+        )
+        assert pytester_result.ret == ExitCode.OK
+        assert "      test_non_existent_scenario_case" in pytester_result.outlines
+        assert any("2 passed, 1 warning, 25% specification coverage" in outline for outline in pytester_result.outlines)
+    with allure.step("Assert that non_existent test raise error in sc_only mode"):
+        pytester_result, _ = run_with_allure(
+            pytester=pytester,
+            testfile_path="non_existent_test.py",
+            additional_opts=["--sc-type", "test", "--sc-only", "--sc-target", "25"],
+            outcomes={"passed": 0},
+        )
+        assert pytester_result.ret == ExitCode.NO_TESTS_COLLECTED
+        assert any(
+            "The following tests linked with nonexistent spec" in outline for outline in pytester_result.outlines
+        )

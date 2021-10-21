@@ -13,7 +13,7 @@
 """Matcher of tests cases and scenarios"""
 import itertools
 import os
-from contextlib import suppress
+import warnings
 from dataclasses import dataclass, field
 from typing import (
     Callable,
@@ -28,7 +28,6 @@ from typing import (
     Tuple,
     Type,
 )
-
 import pytest
 from _pytest.config import ExitCode
 from _pytest.main import Session
@@ -44,6 +43,10 @@ from .config_provider import ConfigProvider
 from .models.collector import Collector
 from .models.scenario import Scenario
 from .xdist_shared import XdistSharedStorage
+
+
+class SpecCollectorWarning(UserWarning):
+    """Warn for spec collector issues"""
 
 
 def is_xdist_first_worker():
@@ -183,6 +186,7 @@ class ScenariosMatcher:
     storage: Optional[XdistSharedStorage]
 
     scenarios: Collection[Scenario] = field(default_factory=list)
+    nonexistent: [PytestItems] = field(default_factory=list)
     matches: Mapping[Scenario, PytestItems] = field(default_factory=dict)
 
     @property
@@ -210,7 +214,7 @@ class ScenariosMatcher:
         """Coverage percent"""
         return int((len(self.scenarios) - len(tuple(self.missed))) / len(self.scenarios) * 100)
 
-    def match(self, items: List[pytest.Item], deselected=False) -> None:
+    def match(self, items: List[pytest.Item], deselected: bool = False) -> None:
         """Match collected tests items with its scenarios"""
 
         if not self.matches:
@@ -218,7 +222,9 @@ class ScenariosMatcher:
         sc_lookup = {sc.id: sc for sc in self.scenarios}
         for item in items:
             for key in scenario_ids(item):
-                with suppress(KeyError):
+                if key not in sc_lookup:
+                    self.nonexistent.append(item)
+                else:
                     if deselected:
                         self.matches[sc_lookup[key]].deselected.append(item)
                     else:
@@ -343,12 +349,25 @@ class ScenariosMatcher:
         Important that fail will be after terminal reporting hooks
         """
         yield
-        if self.config.fail_under and self.spec_coverage_percent < self.config.fail_under:
-            pytest.exit(
-                f"Spec coverage percent is {self.spec_coverage_percent}%, "
-                f"and it is less than target {self.config.fail_under}%",
-                returncode=ExitCode.NO_TESTS_COLLECTED,
-            )
+        warn_message = ""
+        if self.nonexistent:
+            tests_without_spec = "\n    ".join(item.name for item in self.nonexistent)
+            warn_message = f"The following tests linked with nonexistent spec:\n    {tests_without_spec}"
+        if not self.config.fail_under:
+            if warn_message:
+                warnings.warn(SpecCollectorWarning(warn_message))
+        else:
+            exit_message = ""
+            if self.spec_coverage_percent < self.config.fail_under:
+                exit_message += (
+                    f"Spec coverage percent is {self.spec_coverage_percent}%, "
+                    f"and it is less than target {self.config.fail_under}%\n"
+                )
+            if exit_message or warn_message:
+                pytest.exit(
+                    exit_message + warn_message,
+                    returncode=ExitCode.NO_TESTS_COLLECTED,
+                )
 
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter):
         """
