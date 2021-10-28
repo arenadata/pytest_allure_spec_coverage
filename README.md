@@ -51,6 +51,7 @@ All of the .rst files in the directory and sub-folders will be perceived as spec
 The only exception - index.rst files. It will be used as the title of directories.
 
 `spec_endpoint` - optionally endpoint where is hosted your sphinx specs.
+
 `default_branch` - change it if your default repository branch differs from `master`. 
 The current branch gets from env variable `BRANCH_NAME` and is used to build the correct link to spec.
 
@@ -82,6 +83,7 @@ For the linter mode, we have the following options.
 
 `--sc-only` - enable linter mode. 
 If spec coverage percent is lower than `--sc-target` value, you get a non-zero exit code and error message.
+
 `--sc-target` - target percent for the spec coverage. The default target is 100% - uncovered specs are not allowed.
 
 If you use linter mode, tests won't start anyway. It's just the start collection stage and exit with zero or non-zero exit code. 
