@@ -39,9 +39,14 @@ def test_something():
 ### sphinx
 At the moment only sphinx collector implemented. 
 It works with reStructuredText (.rst) files.
-Value for the `scenario` mark - `sphinx-dir`-related path to the spec file:
+Value for the `scenario` mark - `sphinx-dir`-related path to the spec file. Extension is ignored
+```
+path/
+  to/
+    something.rst
+```
 ```python
-@pytest.mark.scenario("path/to/something.rst")
+@pytest.mark.scenario("path/to/something")
 ```
 
 Collector arguments:
