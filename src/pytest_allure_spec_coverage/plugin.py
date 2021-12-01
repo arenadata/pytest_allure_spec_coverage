@@ -104,7 +104,7 @@ def pytest_configure(config: Config) -> None:
     if not config.option.sc_type:
         return
 
-    if os.getenv('ALLURE_TESTPLAN_PATH'):
+    if os.getenv("ALLURE_TESTPLAN_PATH"):
         terminal: TerminalReporter = config.pluginmanager.get_plugin("terminalreporter")
         terminal.write_line("\nSpec coverage plugin is disabled due to allure testplan exists")
         return

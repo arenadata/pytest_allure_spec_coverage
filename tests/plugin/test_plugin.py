@@ -12,9 +12,5 @@ def test_skip_if_testplan_exists(pytester: Pytester, monkeypatch):
     """
     monkeypatch.setenv("ALLURE_TESTPLAN_PATH", "testplan.json")
     opts = ["--sc-type", "something"]
-    pytester_result, _ = run_with_allure(
-        pytester=pytester,
-        testfile_path="simple_test.py",
-        additional_opts=opts
-    )
-    assert 'Spec coverage plugin is disabled due to allure testplan exists' in pytester_result.outlines
+    pytester_result, _ = run_with_allure(pytester=pytester, testfile_path="simple_test.py", additional_opts=opts)
+    assert "Spec coverage plugin is disabled due to allure testplan exists" in pytester_result.outlines
