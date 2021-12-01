@@ -19,7 +19,7 @@ setup(
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     include_package_data=True,
-    version="0.0.2",
+    version="0.0.3",
     # the following makes a plugin available to pytest
     entry_points={"pytest11": ["pytest_allure_spec_coverage = pytest_allure_spec_coverage.plugin"]},
     # custom PyPI classifier for pytest plugins

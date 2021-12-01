@@ -107,6 +107,10 @@ allure_labels =
 ```
 But you can use your custom labels if you needed.
 
+## Note
+If you use Allure TestOps, spec coverage will be disabled in case of test run from TestOps, like re-run in existing launch
+
+
 ## If you want to contribute
 ### Pre-commit hook
 

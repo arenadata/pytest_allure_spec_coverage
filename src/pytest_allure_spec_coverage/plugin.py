@@ -11,6 +11,7 @@
 # limitations under the License.
 
 """Main plugin module"""
+import os
 from dataclasses import dataclass
 from typing import Iterable, MutableMapping, Type
 
@@ -18,6 +19,7 @@ import pytest
 from _pytest.config import Config
 from _pytest.config.argparsing import Parser
 from _pytest.config.exceptions import UsageError
+from _pytest.terminal import TerminalReporter
 from pluggy import PluginManager
 
 from .common import allure_listener
@@ -100,6 +102,11 @@ def pytest_configure(config: Config) -> None:
         storage = None
 
     if not config.option.sc_type:
+        return
+
+    if os.getenv('ALLURE_TESTPLAN_PATH'):
+        terminal: TerminalReporter = config.pluginmanager.get_plugin("terminalreporter")
+        terminal.write_line("\nSpec coverage plugin is disabled due to allure testplan exists")
         return
 
     if config.option.sc_type not in collectors.keys():
